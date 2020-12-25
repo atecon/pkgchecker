@@ -1,0 +1,162 @@
+function scalar is_minimum_gretl_version (void)
+    if $version >= 20205
+        return TRUE
+    else
+        printError("At minimum Gretl version 2020e required.")
+        return FALSE
+    endif
+end function
+
+# FROM metadata
+function scalar read_and_add_xml_buffer (bundle *self)
+    /* Read gdt file which has a xml structure. */
+
+    catch self.xml_buffer = readfile(self.filename)
+    if $error
+        printError(sprintf("Failed to read file '%s'. Abort.\n", self.filename))
+        return TRUE
+    else
+        return FALSE
+    endif
+end function
+
+# TODO: Really needed here? I don't think so
+function string trim_extra_lines (const string buffer)
+    /* */
+
+    if nelem(buffer) == 0
+        return buffer
+    endif
+    strings content = strsplit(buffer, "\n")
+
+    scalar n = nelem(content)
+    if n == 1
+        return content[n]
+    endif
+end function
+
+
+function string get_function_path (void)
+    /* Configure path which should be parsed. */
+
+    return "//gretl-functions/gretl-function-package"
+end function
+
+
+# FROM metadata
+function string get_path_content (const string path "xpath identifier",
+                                  const string xml_buffer,
+                                  scalar *n_got "Number of occurences of path")
+    /* Extract content of some path in xml. */
+
+    string path_content
+
+    path_content = xmlget(xml_buffer, path, &n_got)
+    if $error
+        printWarning(sprintf("Failed to find the path '%s'. Ignore.", path))
+    endif
+
+    return path_content
+end function
+
+function scalar get_number_of_functions (const bundle self)
+    /* Get number of functions of package. */
+
+    scalar n_functions = 0
+    string path = sprintf("%s/gretl-function", get_function_path())
+    string foo = get_path_content(path, self.xml_buffer, &n_functions)
+
+    return n_functions
+end function
+
+
+function bundle extract_functions (const bundle self)
+    /* Compile a key-value store.
+    key: Function name
+    value: String holding the i-th function code */
+
+    bundle Codes
+    scalar n_functions = get_number_of_functions(self)
+
+    if n_functions == 0
+        printWarning("Package includes no functions.")
+        return Codes
+    endif
+
+    loop i=1..n_functions
+        scalar n_got = 0
+        string path_code = sprintf("%s/gretl-function[$i]/code",\
+                                    get_function_path())
+        string function_name = sprintf("%s/gretl-function[$i]/@name",\
+                                    get_function_path())
+
+        string function_name = trim_extra_lines(\
+                get_path_content(function_name, self.xml_buffer, &n_got)\
+                                               )
+
+        function_name = trim_extra_lines(function_name)
+
+        Codes["@function_name"] = get_path_content(path_code, \
+                                    self.xml_buffer, &n_got)
+    endloop
+
+    assert(n_functions == nelem(Codes))
+
+    return Codes
+end function
+
+function bundle get_pkgdata (const string filename "Path to gfn file")
+    /* Main function */
+
+    bundle self = null
+    string self.filename = filename
+
+    if !is_minimum_gretl_version()
+        return null
+    endif
+
+    err = read_and_add_xml_buffer(&self)
+    if err
+        return null
+    endif
+
+    bundle Codes = extract_functions(self)
+
+    /*
+    *** NEXT:
+    A) Look at unused variables within a function
+    1) Loop over each key (=function)
+    2) Cast code for the i-th function as string array (\n as delimiter)
+    3) extract assignments and check whether RHS variables is used
+        somewhere or returned
+
+    B) Apart from 'code' also parse names of params/param[i]/name
+    1) Store 'name' as string array in Codes.input_parameters
+    2) Loop over "code" and check whether input parameters are used in code
+
+    C) For each function name (=key) iterate over code foreach other
+        keys and check that the function is actually used somewhere. Of course,
+        public functions won't be used within other functions...
+
+    D) Write tests
+    */
+    eval getkeys(Codes)[11]
+    eval Codes["print_auto_arima_results"]
+
+
+
+    return self
+end function
+
+
+function void printInfo (const string s)
+    printf "\nInfo: %s\n", s
+end function
+
+function void printWarning (const string s)
+    printf "\nWarning: %s\n", s
+end function
+
+function void printError (const string s)
+    printf "\nError: %s\n", s
+end function

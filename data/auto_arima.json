@@ -1,0 +1,811 @@
+{
+	"gretl-functions": {
+		"gretl-function-package": {
+			"author": {
+				"_email": "atecon@posteo.de",
+				"__text": "Artur Tarassow"
+			},
+			"version": "0.6",
+			"date": "2020-08-04",
+			"description": "Return best ARIMA model according to information criteria value",
+			"tags": "C22 C52",
+			"label": "Automatic ARIMA",
+			"menu-attachment": "MAINWIN/Model/TSModels",
+			"help": "Fit best SARIMA(X) model to univariate time series.\n\nReturns best SARIMAX model according to either AIC, AICc, BIC or HQC value. The function conducts a (brute force) search over possible models within the order constraints provided.\n\n\nThis is an alternative package to the existing gretl armax package written by Yi-Nung Yang which has some limitations, e.g. it does only work for ARMA type models.\n\nThe features of the auto_arima package are:\n- Consideration of seasonal ARIMA models with and without exogenous regressors.\n- Simple API.\n- GUI access through the gretl menu.\n- Public convenience functions for the user for summarizing results, or retrieving the gretl ARIMA command of the 'best' model.\n- Source code is tested by means of unit-tests to minimize bugs.\n\nPlease ask questions and report bugs on the gretl mailing list if possible. Alternatively, create an issue ticket on the github repo (see below).\nSource code and test script(s) can be found here:\nhttps://github.com/atecon/auto_arima\n\n\n\nPUBLIC FUNCTIONS:\n-----------------------------------------------------------------------\nFunction:       auto_arima(const series y, const list xlist[null],\n                bundle opts[null])\nArguments:\ny:              series, Endogenous variable\nxlist:          list, List of exogenous variables (optional)\nopts:           bundle, Bundle for passing SARIMA parameters and further\n                options (see below for details)\n\nReturn:\nBundle comprising the various items.\n-----------------------------------------------------------------------\n\n-----------------------------------------------------------------------\nFunction:       print_auto_arima_results(const bundle model)\n\nArguments:\nmodel:          bundle, Bundle returned by auto_arima() function\n\nReturn:\nNo return value. Print summary results for each parameter combination and\ninformation criteria estimated in tabular form.\n-----------------------------------------------------------------------\n\n-----------------------------------------------------------------------\nFunction:       get_auto_arima_parameters (const bundle model, const string\n                info_criteria, const int model_rank[1::])\n\nArguments:\nmodel:          bundle, Bundle returned by auto_arima() function\ninfo_criteria:  string, Name of information criteria (either \"aicc\", \"aic\",\n                \"bic\" or \"hqc\") for which to return SARIMA parameter vector\nmodel_rank:     int, Compute the SARIMA parameter vector for the n-th\n                best model in terms of the chosen information criteria.\n\nReturn:\nVector of SARIMA parameters of the n-th best model in terms of the chosen information criteria.\n-----------------------------------------------------------------------\n\n-----------------------------------------------------------------------\nFunction:       get_auto_arima_command (const bundle model, const string\n                info_criteria, const int model_rank[1::])\n\nArguments:\nmodel:          bundle, Bundle returned by auto_arima() function\ninfo_criteria:  string, Name of information criteria (either \"aicc\", \"aic\",\n                \"bic\" or \"hqc\") for which to return SARIMA parameter vector\nmodel_rank:     int, Consider the n-th best model in terms of the chosen\n                information criteria.\n\nReturn:\nString holding the gretl/ hansl command for estimating the selected model.\n-----------------------------------------------------------------------\n\n-----------------------------------------------------------------------\nFunction:       auto_arima_gui(none)\n\nArguments:\n\nReturn:\nA wrapper for the GUI. Prints summary results and returns a bundle with model results.\n-----------------------------------------------------------------------\n\n\n\nThe optional 'opts' bundle:\n----------------------------\nThe user can pass an optional bundle as the 3rd argument to the\nauto_arima() function. Currently, the following options are supported:\n\n* verbose:           bool, print details if 1, otherwise no printout\n                     (default 1).\n* with_intercept:    bool, if 1 (or TRUE) an intercept is added to the\n                     model, of 0 (or FALSE) no intercept is added (default 1).\n* with_seasonality:  bool, if 1 (or TRUE) seasonal ARIMA parameters\n                     combinations are considered (if the data frequency\n                     has seasonality), otherwise seasonal ARIMA parameters\n                     are not considered (default 1).\n* estimation_method: string, if \"conditional_ml\" use conditional maximum\n                     likelihood\n* min_p, max_p, min_d, max_d, min_q, max_q, min_P, max_P, min_D, max_D, min_Q, max_Q:               Model parameters (see below for explanations)\n\n\n\nDefault SARIMA parameter values:\n--------------------------------\n* min_p          :  scalar, minimum autoregressive order (default 0)\n* max_p          :  scalar, maximum autoregressive order (default 4)\n* min_d          :  scalar, minimum order of 1-st differencing (default 0)\n* max_d          :  scalar, maximum order of 1-st differencing (default 1)\n* min_q          :  scalar, minimum moving-average order (default 0)\n* max_q          :  scalar, maximum moving-average order (default 4)\n* min_P          :  scalar, minimum seasonal autoregressive order (default 0)\n* max_P          :  scalar, maximum seasonal autoregressive order (default 1)\n* min_D          :  scalar, minimum order of seasonal-differencing (default 0)\n* max_D          :  scalar, maximum order of seasonal-differencing (default 1)\n* min_Q          :  scalar, minimum seasonal moving-average order (default 0)\n* max_Q          :  scalar, maximum seasonal moving-average order (default 1)\n\n\n\nChangelog:\n- v0.6, August 2020:\n   + Fix bug in print_table_and_row_labels(): wrong models where highlighted\n     as best ones.\n   + Fix bug in get_auto_arima_parameters(): wrong n-th best model was\n     retrieved.\n   + Fix minor bug in final_model_options_string(): verbosity option did not\n     work right.\n   + Catch error when trying to retrieve information criteria in case model did\n     not converge and verbose == 0.\n   + Add name of endogenous and xlist members when calling gui function.\n   + Fix typos in help file.\n   + Print name of endogenous and number of exogenous in summary printout\n   + Unit-tests added and improved.\n\n- v0.52, August 2020:\n   + Fix \"max_P\" parameter for GUI wrapper function\n\n- v0.51, July 2020:\n   + Fix bug when executing get_auto_arima_command() function: Names of\n     endogenous series and exogenous list where not correct in every case.\n   + GUI access: Boolean parameter \"seasonality\" dropped: It is automatically\n     checked now whether the active data set has seasonal frequency.\n   + Minor formatting improvements.\n\n- v0.5, July 2020:\n    + initial release",
+			"gretl-function": [
+				{
+					"params": {
+						"param": [
+							{
+								"description": "Endogenous",
+								"_name": "y",
+								"_type": "series",
+								"_const": "true"
+							},
+							{
+								"description": "Exogenous",
+								"_name": "xlist",
+								"_type": "list",
+								"_optional": "true",
+								"_const": "true"
+							},
+							{
+								"description": "Parameter bundle",
+								"_name": "opts",
+								"_type": "bundle",
+								"_optional": "true"
+							}
+						],
+						"_count": "3"
+					},
+					"code": "/* Main public function. */\nif !exists(opts)\n  bundle opts = null\nendif\nbundle self = set_bundle_and_get_defaults(y, opts)\nadd_data_to_bundle(&self, y, xlist)\nstring self.name_yseries = argname(y)\nstring self.name_xlist = (nelem(xlist)) ? argname(xlist) : \"\"\ndo_initial_checks(&self)\nif self.error\n  return self\nendif\nprepare_arima_options_string(&self)\nadd_n_combinations(&self)\nmatrix self.parameter_matrix = get_parameter_matrix(self)\nmatrix self.criteria_values = initialize_criteria_values_mat(self)\nestimate_models(&self)\nrank_models_by_criteria(&self)\nreturn self",
+					"_name": "auto_arima",
+					"_type": "bundle"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Summarize parameter results for each information criteria. */\nerrorif(self.error == TRUE, \"The auto_arima() function throw some error. Please check.\")\nprint_table_border()\nprint_summary_intro(self)\nprint_table_header()\nprint_table_and_row_labels(self)\nprint_table_border()",
+					"_name": "print_auto_arima_results",
+					"_type": "void"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "self",
+								"_type": "bundle",
+								"_const": "true"
+							},
+							{
+								"_name": "info_criteria",
+								"_type": "string",
+								"_const": "true"
+							},
+							{
+								"_name": "model_rank",
+								"_type": "int",
+								"_min": "1",
+								"_const": "true"
+							}
+						],
+						"_count": "3"
+					},
+					"code": "/* Retrieve the vector of ARIMA parameters of the the i-th best model for a specific information criterion. */\nerrorif(model_rank > self.n_combinations, sprintf(\"Selected model rank (%d) exceeds number of models estimated (%d).\", model_rank, self.n_combinations))\nmatrix pos_info_criteria = instrings(get_info_criteria_names(), info_criteria)\nerrorif(!nelem(pos_info_criteria), sprintf(\"Information criteria '%s' unknown.\", info_criteria))\nscalar model_id = self.sorted_model_id[model_rank, pos_info_criteria]\nreturn self.parameter_matrix[model_id, ]",
+					"_name": "get_auto_arima_parameters",
+					"_type": "matrix"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "self",
+								"_type": "bundle",
+								"_const": "true"
+							},
+							{
+								"_name": "info_criteria",
+								"_type": "string",
+								"_const": "true"
+							},
+							{
+								"_name": "model_rank",
+								"_type": "int",
+								"_const": "true"
+							}
+						],
+						"_count": "3"
+					},
+					"code": "/* Compile gretl command of a model selected by information criteria and rank. */\nerrorif(self.error == TRUE, \"The auto_arima() function throw some error. Please check.\")\nmatrix beta = get_auto_arima_parameters(self, info_criteria, model_rank)\nstring cmd = sprintf(\"arima %d %d %d\", beta[1], beta[2], beta[3])\nif data_has_seasonality()\n  cmd += sprintf(\" ; %d %d %d\", beta[4], beta[5], beta[6])\nendif\nif self.with_intercept == TRUE && self.intercept_added == TRUE\n  # passed xlist did not include 'const'\n  cmd += sprintf(\" ; %s const %s %s\", self.name_yseries, self.name_xlist, self.arima_model_options_string)\nelse\n  cmd += sprintf(\" ; %s %s %s\", self.name_yseries, self.name_xlist, self.arima_model_options_string)\nendif\nreturn cmd",
+					"_name": "get_auto_arima_command",
+					"_type": "string"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"description": "Endogenous",
+								"_name": "y",
+								"_type": "series",
+								"_const": "true"
+							},
+							{
+								"description": "Exogenous",
+								"_name": "xlist",
+								"_type": "list",
+								"_optional": "true",
+								"_const": "true"
+							},
+							{
+								"description": "min. AR parameter, p",
+								"_name": "min_p",
+								"_type": "int",
+								"_min": "0",
+								"_default": "1",
+								"_const": "true"
+							},
+							{
+								"description": "max. AR parameter, p",
+								"_name": "max_p",
+								"_type": "int",
+								"_min": "0",
+								"_default": "4",
+								"_const": "true"
+							},
+							{
+								"description": "min. difference order parameter, d",
+								"_name": "min_d",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "max. difference order parameter, d",
+								"_name": "max_d",
+								"_type": "int",
+								"_min": "0",
+								"_default": "1",
+								"_const": "true"
+							},
+							{
+								"description": "min. MA order parameter, q",
+								"_name": "min_q",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "max. MA order parameter, q",
+								"_name": "max_q",
+								"_type": "int",
+								"_min": "0",
+								"_default": "1",
+								"_const": "true"
+							},
+							{
+								"description": "min. seas. AR parameter, P",
+								"_name": "min_P",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "max. seas. AR parameter, P",
+								"_name": "max_P",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "min. seas. difference order parameter, D",
+								"_name": "min_D",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "max. seas. difference order parameter, D",
+								"_name": "max_D",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "min. seas. MA order parameter, Q",
+								"_name": "min_Q",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "max. seas. MA order parameter, Q",
+								"_name": "max_Q",
+								"_type": "int",
+								"_min": "0",
+								"_default": "0",
+								"_const": "true"
+							},
+							{
+								"description": "With intercept",
+								"_name": "with_intercept",
+								"_type": "bool",
+								"_default": "1",
+								"_const": "true"
+							},
+							{
+								"description": "Print details",
+								"_name": "verbose",
+								"_type": "bool",
+								"_default": "0",
+								"_const": "true"
+							}
+						],
+						"_count": "16"
+					},
+					"code": "/* Wrapper for GUI access. */\nbundle self = null\nscalar self.verbose = verbose\nscalar self.with_intercept = with_intercept\nscalar self.with_seasonality = FALSE\nif data_has_seasonality() == TRUE\n  scalar self.with_seasonality = TRUE\n  printInfo(\"Seasonality of your data set detected. Will estimate SARIMAX type of models.\")\n  flush\nendif\nscalar self.min_p = min_p\nscalar self.max_p = max_p\nscalar self.min_d = min_d\nscalar self.max_d = max_d\nscalar self.min_q = min_q\nscalar self.max_q = max_q\nif data_has_seasonality()\n  scalar self.min_P = min_P\n  scalar self.max_P = max_P\n  scalar self.min_D = min_D\n  scalar self.max_D = max_D\n  scalar self.min_Q = min_Q\n  scalar self.max_Q = max_Q\nendif\nbundle model = auto_arima(y, xlist, self)\nif model.error == TRUE\n  printError(\"something went wrong.\")\nelse\n  string model.name_yseries = argname(y) # overwrite \"y\"\n  string model.name_xlist = (nelem(xlist)) ? argname(xlist) : \"\"\n  print_auto_arima_results(model)\nendif\nreturn model",
+					"_name": "auto_arima_gui",
+					"_type": "bundle",
+					"_pkg-role": "gui-main"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Print summary -- for GUI only. Simply a wrapper as \"bundle-print\" (spec-file) needs the argument in pointer form. */\nprint_auto_arima_results(self)",
+					"_name": "print_auto_arima_results_gui",
+					"_type": "void",
+					"_pkg-role": "bundle-print"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Check whether y is constant. Set self.error as TRUE of y is constant.*/\nseries y = self.y\nif isconst(y) == TRUE\n  if self.verbose > 0\n    printError(sprintf(\"Endogenous series '%s' is constant..\", self.name_yseries))\n  endif\n  self.error = TRUE\nendif",
+					"_name": "y_is_constant",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Add intercept to xlist if it should enter the model. */\nif !inlist(self.xlist, \"const\") && self.with_intercept == TRUE\n  if self.verbose == TRUE\n    printInfo(\"Intercept added to xlist as you set intercept to TRUE.\")\n  endif\n  self.xlist += const\n  self.intercept_added = TRUE\nendif",
+					"_name": "add_intercept_to_xlist",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* */\nif inlist(self.xlist, \"const\") && self.with_intercept == FALSE\n  printError(sprintf(\"You set the parameter 'with_intercept' to FALSE but \\n           included it to the list of exogenous. Abort.\"))\n  self.error = TRUE\nendif",
+					"_name": "check_intercept_settings",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Drop intercept from xlist if it should not enter the model. */\nif inlist(self.xlist, \"const\") && self.with_intercept == FALSE\n  self.xlist -= const\n  if self.verbose\n    printInfo(\"Intercept has been dropped.\")\n  endif\nendif",
+					"_name": "drop_intercept_from_xlist",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Perform initial checks and drop optionally intercept. */\ny_is_constant(&self)\ncheck_intercept_settings(&self)\ndrop_intercept_from_xlist(&self)",
+					"_name": "do_initial_checks",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"code": "/* Flag seasonality of data set */\nreturn ($pd > 1) ? 1 : 0",
+					"_name": "data_has_seasonality",
+					"_type": "scalar",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "y",
+								"_type": "series",
+								"_const": "true"
+							},
+							{
+								"_name": "opts",
+								"_type": "bundle",
+								"_optional": "true"
+							}
+						],
+						"_count": "2"
+					},
+					"code": "/* Compile self bundle by merging eventual information\nfrom 'opts' bundle. */\nif !exists(opts)\n  bundle opts = null\nendif\nbundle self = default_values(y)\nself = opts + self\t\t\t# override defaults\nclean_up_self(&self)\nreturn self",
+					"_name": "set_bundle_and_get_defaults",
+					"_type": "bundle",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* */\ndelete self.methods_supported --force",
+					"_name": "clean_up_self",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "y",
+							"_type": "series",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Set default values */\nbundle self = null\nscalar self.error = FALSE\nscalar self.y_is_constant = FALSE\nscalar self.with_intercept = TRUE\nscalar self.intercept_added = FALSE\nscalar self.with_seasonality = data_has_seasonality()\nscalar self.verbose = 1\nlist self.xlist = null\nstrings self.methods_supported  = defarray(\"exact_ml\", \"conditional_ml\")\nstring self.estimation_method = \"exact_ml\" # gretl built-in default\n# arima parameters\nscalar self.min_p = 0\nscalar self.max_p = 4\nscalar self.min_d = 0\nscalar self.max_d = 1\nscalar self.min_q = 0\nscalar self.max_q = 4\n# seasonal arima parameters\nscalar self.min_D = 0\nscalar self.max_D = (self.with_seasonality == TRUE) ? 1 : 0\nscalar self.min_P = 0\nscalar self.max_P = (self.with_seasonality == TRUE) ? 1 : 0\nscalar self.min_Q = 0\nscalar self.max_Q = (self.with_seasonality == TRUE) ? 1 : 0\nreturn self",
+					"_name": "default_values",
+					"_type": "bundle",
+					"_private": "1"
+				},
+				{
+					"code": "return defarray(\"aicc\", \"aic\", \"bic\", \"hqc\")",
+					"_name": "get_info_criteria_names",
+					"_type": "strings",
+					"_private": "1"
+				},
+				{
+					"code": "/* */\nstrings params = defarray(\"p\", \"d\", \"q\")\nif data_has_seasonality()\n  strings params = params + defarray(\"P\", \"D\", \"Q\")\nendif\nreturn params",
+					"_name": "get_parameter_names",
+					"_type": "strings",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Compute number of parameter combinations. */\nscalar n = 1\nstrings parameters = get_parameter_names()\nloop foreach i parameters\n  string param = parameters[i]\n  scalar n *= (1 + self.max_@param - self.min_@param)\nendloop\nscalar self.n_combinations = n",
+					"_name": "add_n_combinations",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "self",
+								"_type": "bundleref"
+							},
+							{
+								"_name": "y",
+								"_type": "series",
+								"_const": "true"
+							},
+							{
+								"_name": "xlist",
+								"_type": "list",
+								"_optional": "true",
+								"_const": "true"
+							}
+						],
+						"_count": "3"
+					},
+					"code": "/* */\nseries self.y = y\nlist self.xlist = xlist\nadd_intercept_to_xlist(&self)",
+					"_name": "add_data_to_bundle",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Compile row lables for summary table. */\nstrings row_labels = array(self.n_combinations)\nloop j=1..rows(self.parameter_matrix)\n  string label = sprintf(\"%d|%d|%d\", self.parameter_matrix[j,1], self.parameter_matrix[j,2], self.parameter_matrix[j,3])\n  if data_has_seasonality()\n    label += sprintf(\" |%d|%d|%d\", self.parameter_matrix[j,4], self.parameter_matrix[j,5], self.parameter_matrix[j,6])\n  endif\n  row_labels[j] = label\nendloop\nreturn row_labels",
+					"_name": "row_labels",
+					"_type": "strings",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "position",
+							"_type": "int",
+							"_min": "1",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "if position == 1\n  return \"***\"\nelif position == 2\n  return \"**\"\nelif position == 3\n  return \"*\"\nelse\n  return \"\"\nendif",
+					"_name": "asterisks",
+					"_type": "string",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "target_value",
+								"_type": "scalar",
+								"_const": "true"
+							},
+							{
+								"_name": "vector",
+								"_type": "matrix"
+							}
+						],
+						"_count": "2"
+					},
+					"code": "/* Return the index of a scalar value in vector 'vector'. The 'target_value' is allowed to appear in 'vector' only once. */\nmatrix vector = vec(vector)\nif sum(vector .= target_value) == 0\n  print \"Warning: Value does not exist in vector.\"\n  return NA\nelif sum(vector .= target_value) > 1\n  print \"Warning: Value does appear multiple times in vector.\"\n  return NA\nendif\nloop i = 1..rows(vector)\n  if vector[i] == target_value\n    return $i\n  endif\nendloop",
+					"_name": "rank_of_model_id",
+					"_type": "scalar",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Print actual summary values and row labels */\nstrings row_labels = row_labels(self)\nstrings criteria_names = get_info_criteria_names()\nstring asterisks\nprintf \"\\n\"\nloop j=1..self.n_combinations\n  printf \"%s \", row_labels[j]\n  # Actual value plus asterisks indicating rank of model specification\n  loop i=1..nelem(criteria_names)\n    string asterisk_str = asterisks(rank_of_model_id(j, self.sorted_model_id[,i]))\n    printf \"%14.3f%s\", self.criteria_values[j,i], asterisk_str\n    print_whitespaces(asterisk_str)\n  endloop\n  printf \"\\n\"\nendloop",
+					"_name": "print_table_and_row_labels",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "asterisk_str",
+							"_type": "string",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* */\nif strlen(asterisk_str) == 0\n  printf \"   \"\nelif strlen(asterisk_str) == 1\n  printf \"  \"\nelif strlen(asterisk_str) == 2\n  printf \" \"\nendif",
+					"_name": "print_whitespaces",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "printf \"\\t\\tSummary results of ARIMA model combinations\\n\\n\"\nprint \"Three, two and one asterisk(s) below indicate the 1st, 2nd and 3rd best (that\"\nprint \"is, minimized) values of the respective information criteria, AIC = Akaike\"\nprint \"criterion, AICC = corrected AIC, BIC = Schwarz Bayesian criterion and\"\nprint \"HQC = Hannan-Quinn criterion across all ARIMA model specification.\"\nprintf \"\\nCommon sample used for all models: %s to %s\", self.sample_start, self.sample_end\nprintf \"\\nName of endogenous: '%s'\\n\", self.name_yseries\nprintf \"Number of exogenous:  %d\\n\", nelem(self.xlist)",
+					"_name": "print_summary_intro",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"code": "printf \"\\n**********************************************************************************\\n\"",
+					"_name": "print_table_border",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"code": "strings criteria_names = get_info_criteria_names()\nif data_has_seasonality()\n  printf \"\\n\\nARIMA-spec.          \"\nelse\n  printf \"\\n\\nARIMA-spec.   \"\nendif\nloop foreach i criteria_names\n  printf \"$i             \"\nendloop\nprintf \"\\n----------------------------------------------------------------------------------\\n\"",
+					"_name": "print_table_header",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Rank models by information criteria. */\nmatrix criteria_values = seq(1, self.n_combinations)' ~ self.criteria_values\nmatrix sorted_model_id = initialize_criteria_values_mat(self)\nstrings criteria_names = cnameget(sorted_model_id)\nloop foreach i criteria_names\n  sorted_model_id[,i] = msortby(criteria_values, 1+i)[,1]\nendloop\nself.sorted_model_id = sorted_model_id",
+					"_name": "rank_models_by_criteria",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "parameter_matrix",
+								"_type": "matrix",
+								"_const": "true"
+							},
+							{
+								"_name": "p",
+								"_type": "scalarref"
+							},
+							{
+								"_name": "d",
+								"_type": "scalarref"
+							},
+							{
+								"_name": "q",
+								"_type": "scalarref"
+							},
+							{
+								"_name": "P",
+								"_type": "scalarref",
+								"_optional": "true"
+							},
+							{
+								"_name": "D",
+								"_type": "scalarref",
+								"_optional": "true"
+							},
+							{
+								"_name": "Q",
+								"_type": "scalarref",
+								"_optional": "true"
+							}
+						],
+						"_count": "7"
+					},
+					"code": "/* Retrieve sarima parameters from overall parameter matrix. */\nscalar p = parameter_matrix[1]\nscalar d = parameter_matrix[2]\nscalar q = parameter_matrix[3]\nif data_has_seasonality()\n  scalar P = parameter_matrix[4]\n  scalar D = parameter_matrix[5]\n  scalar Q = parameter_matrix[6]\nendif",
+					"_name": "get_parameters",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* */\nmatrix criteria_values = mshape(NA, rows(self.parameter_matrix), nelem(get_info_criteria_names()))\ncnameset(criteria_values, get_info_criteria_names())\nreturn criteria_values",
+					"_name": "initialize_criteria_values_mat",
+					"_type": "matrix",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Estimate SARIMAX models for all parameter combinations. */\nseries y = self.y\nlist xlist = self.xlist\n# Restrict the data set to the least common sample to ensure that information criteria a comparable\nscalar offset = max(self.parameter_matrix)\nsmpl +offset ;\nstring self.sample_start = obslabel($t1)\nstring self.sample_end = obslabel($t2)\nloop i=1..rows(self.parameter_matrix)\n  self.criteria_values[i,] = arima_estimation_get_info_crits(y, xlist, self, $i)\nendloop",
+					"_name": "estimate_models",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Compile string with options for arima command. */\nstring s = self.arima_model_options_string\nif self.verbose == 0\n  s += \" --quiet\"\nelif self.verbose == 2\n  s += \" --verbose\"\nendif\nreturn s",
+					"_name": "final_model_options_string",
+					"_type": "string",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "y",
+								"_type": "series",
+								"_const": "true"
+							},
+							{
+								"_name": "xlist",
+								"_type": "list",
+								"_const": "true"
+							},
+							{
+								"_name": "self",
+								"_type": "bundle",
+								"_const": "true"
+							},
+							{
+								"_name": "parameter_set_id",
+								"_type": "int",
+								"_min": "1",
+								"_const": "true"
+							}
+						],
+						"_count": "4"
+					},
+					"code": "/* Actual estimation of SARIMAX model and computation of information criteria. */\nstring arima_model_options_string = final_model_options_string(self)\nscalar p, d, q, P, D, Q\nstrings criteria_names = get_info_criteria_names()\nmatrix criteria_values = mshape(NA, 1, nelem(criteria_names))\nget_parameters(self.parameter_matrix[parameter_set_id,], &p, &d, &q, &P, &D, &Q)\nif data_has_seasonality()\n  catch arima p d q ; P D Q; y xlist @arima_model_options_string\nelse\n  catch arima p d q ; y xlist @arima_model_options_string\nendif\nif ($error || !inbundle($model, \"aic\")) && self.verbose\n  printWarning(sprintf(\"Failed to estimated SARIMAX(%d,%d,%d,%d,%d,%d) model. Ignored.\", p, d, q, P, D, Q))\nelse\n  loop foreach i criteria_names\n    if criteria_names[i] != \"aicc\"\n      string crit = sprintf(\"$%s\", criteria_names[i])\n      catch criteria_values[i] = @crit\n      if $error\n        criteria_values[i] = NA\n      endif\n    else\n      criteria_values[i] = aicc($model)\n    endif\n  endloop\nendif\nreturn criteria_values",
+					"_name": "arima_estimation_get_info_crits",
+					"_type": "matrix",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "model",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Compute the corrected AIC criteria. */\nscalar aicc = NA\nif inbundle(model, \"aic\") == TRUE\n  scalar aic = model.aic\n  scalar n = model.T\n  scalar k = model.ncoeff\n  aicc = aic + (2 * k * (k+1)) / (n-k-1)\nendif\nreturn aicc",
+					"_name": "aicc",
+					"_type": "scalar",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Remove seasonal arima parameters from bundle if not needed. */\nif data_has_seasonality() == FALSE\n  scalar self.min_D = NA\n  scalar self.max_D = NA\n  scalar self.min_P = NA\n  scalar self.max_P = NA\n  scalar self.min_Q = NA\n  scalar self.max_Q = NA\nendif",
+					"_name": "set_sarima_parameters_to_nan",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle"
+						},
+						"_count": "1"
+					},
+					"code": "/* Prepare matrix with all parameter combinations for ARIMA. */\nmatrix combs = sarima_parameter_matrix(self)\n# Special treatment for non-seasonal case\nmatrix combs = combs[,1:nelem(get_parameter_names())]   # Grab only p, d, q\nset_sarima_parameters_to_nan(&self)\ncnameset(combs, get_parameter_names())\nreturn combs",
+					"_name": "get_parameter_matrix",
+					"_type": "matrix",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": [
+							{
+								"_name": "min_lag",
+								"_type": "int",
+								"_min": "0",
+								"_const": "true"
+							},
+							{
+								"_name": "max_lag",
+								"_type": "int",
+								"_min": "0",
+								"_const": "true"
+							}
+						],
+						"_count": "2"
+					},
+					"code": "errorif(max_lag < min_lag, \"Maximum lag cannot be lower than minimum lag.\")\nreturn 1 + max_lag - min_lag",
+					"_name": "n_lags",
+					"_type": "scalar",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* Prepare the parameter combindations for SARIMA. */\nscalar k = 6        # p, d, q, P, D, Q\nscalar n_p = n_lags(self.min_p, self.max_p)\nscalar n_d = n_lags(self.min_d, self.max_d)\nscalar n_q = n_lags(self.min_q, self.max_q)\nscalar n_P = n_lags(self.min_P, self.max_P)\nscalar n_D = n_lags(self.min_D, self.max_D)\nscalar n_Q = n_lags(self.min_Q, self.max_Q)\nscalar n_rows = n_p * n_d * n_q * n_P * n_D * n_Q\nmatrix combs = mshape(NA, n_rows, k)\nscalar repeat = 1\n# start with Q (the rightest variable)\nmatrix m = ones(n_Q, (n_rows/n_Q)) .* seq(self.min_Q, self.max_Q)'\ncombs[,6] = vec(m)\nrepeat *= n_Q\nmatrix m = ones(n_D, repeat) .* seq(self.min_D, self.max_D)'\nm = vec(m')\nscalar factor = n_p * n_d * n_q * n_P\ncombs[,5] = vec(m .* ones(rows(m), factor))\nrepeat *= n_D\nmatrix m = ones(n_P, repeat) .* seq(self.min_P, self.max_P)'\nm = vec(m')\nscalar factor = n_p * n_d * n_q\ncombs[,4] = vec(m .* ones(rows(m), factor))\nrepeat *= n_P\nmatrix m = ones(n_q, repeat) .* seq(self.min_q, self.max_q)'\nm = vec(m')\nscalar factor = n_p * n_d\ncombs[,3] = vec(m .* ones(rows(m), factor))\nrepeat *= n_q\nmatrix m = ones(n_d, repeat) .* seq(self.min_d, self.max_d)'\nm = vec(m')\nscalar factor = n_p\ncombs[,2] = vec(m .* ones(rows(m), factor))\nrepeat *= n_d\nmatrix m = ones(n_p, repeat) .* seq(self.min_p, self.max_p)'\nm = vec(m')\ncombs[,1] = vec(m')\nreturn combs",
+					"_name": "sarima_parameter_matrix",
+					"_type": "matrix",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundleref"
+						},
+						"_count": "1"
+					},
+					"code": "/* Compile various option strings for arima command. */\nstring arima_model_options_string = \"\"\narima_model_options_string = (self.with_intercept == FALSE) ? \"--nc \" : arima_model_options_string\narima_model_options_string += (self.estimation_method == \"conditional_ml\") ? \"--conditional\" : \"\"\nself.arima_model_options_string = arima_model_options_string",
+					"_name": "prepare_arima_options_string",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "self",
+							"_type": "bundle",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "/* */\nself.estimation_method = tolower(self.estimation_method)\nif instrings(self.methods_supported, self.estimation_method)\n  return 1\nelse\n  printWarning(sprintf(\"Estimation method '%s' not supported.\", self.estimation_method))\n  printInfo(sprintf(\"Will switch to %s method.\", self.methods_supported[1]))\n  self.estimation_method = self.methods_supported[1]\n  return 0\nendif",
+					"_name": "estimation_method_supported",
+					"_type": "scalar",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "s",
+							"_type": "string",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "printf \"\\nInfo: %s\\n\", s",
+					"_name": "printInfo",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "s",
+							"_type": "string",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "printf \"\\nWarning: %s\\n\", s",
+					"_name": "printWarning",
+					"_type": "void",
+					"_private": "1"
+				},
+				{
+					"params": {
+						"param": {
+							"_name": "s",
+							"_type": "string",
+							"_const": "true"
+						},
+						"_count": "1"
+					},
+					"code": "printf \"\\nError: %s\\n\", s",
+					"_name": "printError",
+					"_type": "void",
+					"_private": "1"
+				}
+			],
+			"sample-script": "clear\nset verbose off\n\ninclude auto_arima.gfn\n\n# Select an example\nscalar EXAMPLE = 1\n\nif EXAMPLE == 1\n    # Box and Jenkins \"Series G\" (airline passengers)\n    open bjg.gdt -p -q         # monthly frequency\nelif EXAMPLE == 2\n    open hendry_jae.gdt -q -p  # annual frequency\nendif\n\n\nlist xlist = null\nif EXAMPLE == 1\n    # Find \"best\" ARIMA model and pass some additional option\n    series foo = normal()\n    list L = foo                # add an exogenous\n\n    # Set \"max_p\" manually to 2\n    bundle Bout = auto_arima(lg, L, defbundle(\"verbose\", 0, \"max_p\", 2))\n\nelif EXAMPLE == 2\n    series y = ldiff(gdp)\n\n    # Find \"best\" ARIMA model\n    bundle Bout = auto_arima(y)\nendif\n\n# print stuff in resulting bundle\nprint Bout\n\n# Print summary of results for all info-crit\nprint_auto_arima_results(Bout)\n\n# Print coefficient vector of the n-th best model using the AIC\nmatrix arima_params = get_auto_arima_parameters(Bout, \"aic\", 1)\nprint arima_params\n\nmatrix arima_params = get_auto_arima_parameters(Bout, \"aicc\", 2)\nprint arima_params\n\n\n# Retrieve the gretl command for estimating the n-th best model according to BIC\nstring arima_cmd = get_auto_arima_command(Bout, \"bic\", 2)\narima_cmd\n# Execute actual estimation\n@arima_cmd",
+			"_name": "auto_arima",
+			"_needs-time-series-data": "true",
+			"_minver": "2020b"
+		}
+	}
+}

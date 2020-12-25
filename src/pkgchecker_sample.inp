@@ -1,0 +1,24 @@
+set verbose off
+# include metadata.gfn
+include "/home/at/git/pkgchecker/src/pkgchecker.inp" --force
+
+scalar EXAMPLE = 1
+
+if EXAMPLE == 1
+    Meta = get_pkgdata("../data/auto_arima.xml")
+    print Meta
+
+
+elif EXAMPLE == 2
+    Meta = get_metadata("data4-10.gdt")
+    print Meta
+    eval Meta.SeriesDetails.PUPIL
+
+elif EXAMPLE == 3   # also get 'markers'
+    open mrw.gdt -q
+    Meta = get_metadata("mrw.gdt", TRUE)
+    print Meta
+    eval Meta.SeriesDetails.nonoil.discrete
+    eval Meta.markers
+    eval Meta.markers[1]    # 1st marker value
+endif
