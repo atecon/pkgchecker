@@ -33,6 +33,8 @@ function string trim_extra_lines (const string buffer)
     if n == 1
         return content[n]
     endif
+
+    return content
 end function
 
 
@@ -70,7 +72,44 @@ function scalar get_number_of_functions (const bundle self)
 end function
 
 
-function bundle extract_functions (const bundle self)
+function string get_path_code (const string function_path,
+                               const int item[1::] "i-th function code")
+    /* Compile path for retrieving code' for i-th function definition. */
+    return sprintf("%s/gretl-function[%d]/code", function_path, item)
+end function
+
+function string get_path_code_name (const string function_path,
+                                    const int item[1::] "i-th function code")
+    /* Compile path for retrieving function's name for the i-th function definition. */
+    return sprintf("%s/gretl-function[%d]/@name", function_path, item)
+end function
+
+function string get_function_name (const string function_path,
+                                   const scalar item[1::] "i-th function code",
+                                   const bundle self)
+    /* Retrieve function name for the i-th function. */
+
+    scalar n_got = 0
+    string path = get_path_code_name(function_path, item)
+    string function_name = get_path_content(path, self.xml_buffer, &n_got)
+
+    return trim_extra_lines(function_name)
+end function
+
+
+function string get_code (const string function_path,
+                          const scalar item[1::] "i-th function code",
+                         const bundle self)
+    /* Retrieve function name for the i-th function. */
+
+    scalar n_got = 0
+    string path = get_path_code(function_path, item)
+
+    return get_path_content(path, self.xml_buffer, &n_got)
+end function
+
+
+function bundle extract_code_and_parameters (const bundle self)
     /* Compile a key-value store.
     key: Function name
     value: String holding the i-th function code */
@@ -84,20 +123,14 @@ function bundle extract_functions (const bundle self)
     endif
 
     loop i=1..n_functions
-        scalar n_got = 0
-        string path_code = sprintf("%s/gretl-function[$i]/code",\
-                                    get_function_path())
-        string function_name = sprintf("%s/gretl-function[$i]/@name",\
-                                    get_function_path())
+        string function_name = get_function_name(get_function_path(), $i, self)
 
-        string function_name = trim_extra_lines(\
-                get_path_content(function_name, self.xml_buffer, &n_got)\
-                                               )
-
-        function_name = trim_extra_lines(function_name)
-
-        Codes["@function_name"] = get_path_content(path_code, \
-                                    self.xml_buffer, &n_got)
+        if nelem(function_name) == 0
+            printWarning("Function not found. Ignore.")
+            flush
+        else
+            Codes["@function_name"] = get_code(get_function_path(), $i, self)
+        endif
     endloop
 
     assert(n_functions == nelem(Codes))
@@ -120,7 +153,8 @@ function bundle get_pkgdata (const string filename "Path to gfn file")
         return null
     endif
 
-    bundle Codes = extract_functions(self)
+    bundle Codes = extract_code_and_parameters(self)
+    print Codes
 
     /*
     *** NEXT:
@@ -129,6 +163,17 @@ function bundle get_pkgdata (const string filename "Path to gfn file")
     2) Cast code for the i-th function as string array (\n as delimiter)
     3) extract assignments and check whether RHS variables is used
         somewhere or returned
+
+    Codes (bundle)
+        |-function_name1
+            |-Code (string)
+            |-parameter_names (string array)
+                |- [Name1, Name2,..., NameN]
+        |-function_name2
+            |-Code (string)
+            |-parameter_names (string array)
+                |- [Name1, Name2,..., NameN]
+
 
     B) Apart from 'code' also parse names of params/param[i]/name
     1) Store 'name' as string array in Codes.input_parameters

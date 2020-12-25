@@ -7,6 +7,82 @@ include assertion.gfn
 include "./src/pkgchecker.inp" --force
 
 
+function void test_get_path_code_name (void)
+    print "Start testing get_path_code_name()."
+
+    # Given
+    string path = "//foo"
+    matrix values = seq(1, 2)'
+
+    # When
+    strings expected_paths = defarray(\
+                "//foo/gretl-function[1]/@name",\
+                "//foo/gretl-function[2]/@name"\
+                                    )
+    strings actual_paths = array(rows(values))
+    loop i=1..nelem(actual_paths)
+        actual_paths[i] = get_path_code_name(path, $i)
+    endloop
+
+    # Then
+    loop i=1..nelem(actual_paths)
+        assert(actual_paths[i] == expected_paths[i])
+    endloop
+
+end function
+test_get_path_code_name()
+
+
+function void test_get_path_code (void)
+    print "Start testing get_path_code()."
+
+    # Given
+    string path = "//foo"
+    matrix values = seq(1, 2)'
+
+    # When
+    strings expected_paths = defarray(\
+                "//foo/gretl-function[1]/code",\
+                "//foo/gretl-function[2]/code"\
+                                    )
+    strings actual_paths = array(rows(values))
+    loop i=1..nelem(actual_paths)
+        actual_paths[i] = get_path_code(path, $i)
+    endloop
+
+    # Then
+    loop i=1..nelem(actual_paths)
+        assert(actual_paths[i] == expected_paths[i])
+    endloop
+
+end function
+test_get_path_code()
+
+
+function void test_get_function_name (void)
+    print "Start testing get_function_name()"
+
+    # Given
+
+    # When
+
+    # Then
+
+end function
+test_get_function_name()
+
+
+function void test_get_code (void)
+    print "Start testing get_code()"
+
+    # Given
+
+    # When
+
+    # Then
+
+end function
+test_get_code()
 
 
 
