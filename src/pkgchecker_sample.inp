@@ -7,12 +7,14 @@ scalar EXAMPLE = 1
 if EXAMPLE == 1
     Meta = get_pkgdata("../data/auto_arima.xml")
     print Meta
-
+    eval nelem(Meta)
+stop
 
 elif EXAMPLE == 2
     Meta = get_metadata("data4-10.gdt")
     print Meta
     eval Meta.SeriesDetails.PUPIL
+
 
 elif EXAMPLE == 3   # also get 'markers'
     open mrw.gdt -q

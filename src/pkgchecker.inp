@@ -53,7 +53,7 @@ function string get_path_content (const string path "xpath identifier",
 
     string path_content
 
-    path_content = xmlget(xml_buffer, path, &n_got)
+    catch path_content = xmlget(xml_buffer, path, &n_got)
     if $error
         printWarning(sprintf("Failed to find the path '%s'. Ignore.", path))
     endif
@@ -65,12 +65,24 @@ function scalar get_number_of_functions (const bundle self)
     /* Get number of functions of package. */
 
     scalar n_functions = 0
-    string path = sprintf("%s/gretl-function", get_function_path())
-    string foo = get_path_content(path, self.xml_buffer, &n_functions)
+    scalar valid = TRUE
+    scalar counter = 1
+
+    loop while valid == TRUE
+        scalar n_got = 0
+        string path = get_path_code(get_function_path(), counter)
+        string foo = get_path_content(path, self.xml_buffer, &n_got)
+
+        if n_got
+            n_functions++
+            counter++
+        else
+            break
+        endif
+    endloop
 
     return n_functions
 end function
-
 
 function string get_path_code (const string function_path,
                                const int item[1::] "i-th function code")
@@ -84,32 +96,90 @@ function string get_path_code_name (const string function_path,
     return sprintf("%s/gretl-function[%d]/@name", function_path, item)
 end function
 
-function string get_function_name (const string function_path,
-                                   const scalar item[1::] "i-th function code",
-                                   const bundle self)
+function string get_code (const scalar item[1::] "i-th function code",
+                          const bundle self)
     /* Retrieve function name for the i-th function. */
 
     scalar n_got = 0
-    string path = get_path_code_name(function_path, item)
-    string function_name = get_path_content(path, self.xml_buffer, &n_got)
-
-    return trim_extra_lines(function_name)
-end function
-
-
-function string get_code (const string function_path,
-                          const scalar item[1::] "i-th function code",
-                         const bundle self)
-    /* Retrieve function name for the i-th function. */
-
-    scalar n_got = 0
-    string path = get_path_code(function_path, item)
+    string path = get_path_code(get_function_path(), item)
 
     return get_path_content(path, self.xml_buffer, &n_got)
 end function
 
 
-function bundle extract_code_and_parameters (const bundle self)
+function string get_path_count_parameters (const string function_path,
+                                           const int item[1::] "i-th function code")
+    return sprintf("%s/gretl-function[%d]/params/@count",\
+                    function_path, item)
+end function
+
+function scalar get_number_of_parameters (const int item[1::],
+                                          const bundle self)
+    /* Get number of parameters for a specific functions. */
+
+    scalar n_parameters = 0
+    string path = get_path_count_parameters(get_function_path(), item)
+
+    return atof(get_path_content(path, self.xml_buffer, &n_parameters))
+end function
+
+function string get_path_parameter_name (const string function_path,
+                                         const int item[1::] "i-th function code",
+                                         const int iparam[1::] "n-th parameter")
+    /* Retrieve name of input parameter. */
+    return sprintf("%s/gretl-function[%d]/params/param[%d]/@name",\
+                    function_path, item, iparam)
+end function
+
+
+function strings get_parameter_names (const scalar item[1::] "i-th function",
+                                      const bundle self)
+    /* Retrieve function name for the i-th function. */
+
+    scalar n_parameters = get_number_of_parameters(item, self)
+    if ok(n_parameters)
+        strings names = array(n_parameters)
+    else
+        return array(0) # function has void input
+    endif
+
+    loop i=1..n_parameters
+        scalar n_got = 0
+        string path = get_path_parameter_name(get_function_path(), item, i)
+        names[i] = strstrip(get_path_content(path, self.xml_buffer, &n_got))
+    endloop
+
+    return names
+end function
+
+
+
+function string get_function_name (const scalar item[1::] "i-th function code",
+                                   const bundle self)
+    /* Retrieve function name for the i-th function. */
+
+    scalar n_got = 0
+    string path = get_path_code_name(get_function_path(), item)
+    string function_name = get_path_content(path, self.xml_buffer, &n_got)
+
+    return trim_extra_lines(function_name)
+end function
+
+function bundle extract_parameters (bundle Metadata,
+                                    const bundle self)
+    /* Extract input parameters for each function. */
+
+    strings function_names = getkeys(Metadata)
+
+    loop foreach i function_names
+        Metadata["$i"].parameter_names = get_parameter_names(i, self)
+    endloop
+
+    return Metadata
+end function
+
+
+function bundle extract_code (const bundle self)
     /* Compile a key-value store.
     key: Function name
     value: String holding the i-th function code */
@@ -123,13 +193,14 @@ function bundle extract_code_and_parameters (const bundle self)
     endif
 
     loop i=1..n_functions
-        string function_name = get_function_name(get_function_path(), $i, self)
+        string function_name = get_function_name($i, self)
 
         if nelem(function_name) == 0
             printWarning("Function not found. Ignore.")
             flush
         else
-            Codes["@function_name"] = get_code(get_function_path(), $i, self)
+            bundle Codes["@function_name"] = \
+                        _(code = get_code($i, self))
         endif
     endloop
 
@@ -153,8 +224,13 @@ function bundle get_pkgdata (const string filename "Path to gfn file")
         return null
     endif
 
-    bundle Codes = extract_code_and_parameters(self)
-    print Codes
+    bundle Metadata = extract_code(self)
+    if nelem(Metadata) == 0
+        return self
+    endif
+
+    bundle Metadata = extract_parameters(Metadata, self)
+
 
     /*
     *** NEXT:
@@ -185,12 +261,11 @@ function bundle get_pkgdata (const string filename "Path to gfn file")
 
     D) Write tests
     */
-    eval getkeys(Codes)[11]
-    eval Codes["print_auto_arima_results"]
 
+    eval getkeys(Metadata)[11]
+    eval Metadata["print_auto_arima_results"]
 
-
-    return self
+    return Metadata
 end function
 
 

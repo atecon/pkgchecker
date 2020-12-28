@@ -58,31 +58,178 @@ function void test_get_path_code (void)
 end function
 test_get_path_code()
 
+function void test_get_path_count_parameters (void)
+    print "Start testing get_path_count_parameters()."
+
+    # Given
+    string path = "//foo"
+    matrix values = seq(1, 2)'
+
+    # When
+    strings expected_paths = defarray(\
+                "//foo/gretl-function[1]/params/@count",\
+                "//foo/gretl-function[2]/params/@count"\
+                                    )
+    strings actual_paths = array(rows(values))
+    loop i=1..nelem(actual_paths)
+        actual_paths[i] = get_path_count_parameters(path, $i)
+    endloop
+
+    # Then
+    loop i=1..nelem(actual_paths)
+        assert(actual_paths[i] == expected_paths[i])
+    endloop
+
+end function
+test_get_path_count_parameters()
+
+
+function void test_get_number_of_parameters (void)
+    print "Start testing get_number_of_parameters()."
+
+    # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
+
+    # When
+    scalar nvars_func1_expected = 3
+    scalar nvars_func2_expected = 1
+    scalar nvars_func1_actual = get_number_of_parameters(1, B)
+    scalar nvars_func2_actual = get_number_of_parameters(2, B)
+
+    # Then
+    assert(nvars_func1_actual == nvars_func1_expected)
+    assert(nvars_func2_actual == nvars_func2_expected)
+end function
+test_get_number_of_parameters()
+
+
+function void test_get_parameter_names (void)
+    print "Start testing get_parameter_names()."
+
+    # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
+
+    # When
+    strings varnames_func1_expected = defarray("y", "xlist", "opts")
+    strings varnames_func2_expected = defarray("self")
+    strings varnames_func1_actual = get_parameter_names(1, B)
+    strings varnames_func2_actual = get_parameter_names(2, B)
+
+    # Then
+    loop foreach i varnames_func1_expected
+        assert("$i" == varnames_func1_actual[i])
+    endloop
+    loop foreach i varnames_func2_expected
+        assert("$i" == varnames_func2_actual[i])
+    endloop
+end function
+test_get_parameter_names()
+
+
 
 function void test_get_function_name (void)
     print "Start testing get_function_name()"
 
     # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
+
 
     # When
+    string funcname_1_expected = "auto_arima"
+    string funcname_2_expected = "print_auto_arima_results"
+    string funcname_1_actual = get_function_name(1, B)
+    string funcname_2_actual = get_function_name(2, B)
 
     # Then
-
+    assert(funcname_1_actual == funcname_1_expected)
+    assert(funcname_2_actual == funcname_2_expected)
 end function
 test_get_function_name()
-
 
 function void test_get_code (void)
     print "Start testing get_code()"
 
     # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
 
     # When
+    string code_1_expected = "/* Main public function. */\
+if !exists(opts)\
+  bundle opts = null\
+endif\
+bundle self = set_bundle_and_get_defaults(y, opts)\
+add_data_to_bundle(&self, y, xlist)\
+string self.name_yseries = argname(y)\
+string self.name_xlist = (nelem(xlist)) ? argname(xlist) : \"\"\
+do_initial_checks(&self)\
+if self.error\
+  return self\
+endif\
+prepare_arima_options_string(&self)\
+add_n_combinations(&self)\
+matrix self.parameter_matrix = get_parameter_matrix(self)\
+matrix self.criteria_values = initialize_criteria_values_mat(self)\
+estimate_models(&self)\
+rank_models_by_criteria(&self)\
+return self"
+
+    string code_2_expected = "/* Summarize parameter results for each information criteria. */\
+errorif(self.error == TRUE, \"The auto_arima() function throw some error. Please check.\")\
+print_table_border()\
+print_summary_intro(self)\
+print_table_header()\
+print_table_and_row_labels(self)\
+print_table_border()"
+
+    string code_1_actual = get_code(1, B)
+    string code_2_actual = get_code(2, B)
 
     # Then
-
+    assert(nelem(code_1_actual) == nelem(code_1_expected))
+    assert(nelem(code_2_actual) == nelem(code_2_expected))
 end function
 test_get_code()
+
+
+function void test_get_number_of_functions (void)
+    print "Start testing get_number_of_functions()."
+
+    # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
+
+    # When
+    scalar n_expected = 43
+    scalar n_actual = get_number_of_functions(B)
+
+    # Then
+    assert(n_actual == n_expected)
+end function
+test_get_number_of_functions()
+
+
+function void test_extract_code (void)
+    print "Start testing extract_code()."
+
+    # Given
+    string filename = "./data/auto_arima.gfn"
+    string xml_buffer = readfile("@filename")
+    bundle B = _(xml_buffer, filename)
+
+    # When
+    bundle Actual = extract_code(B)
+    Actual
+    stop
+
+get_path_number_of_functions
+    # Then
+    then
+end function
+test_extract_code()
 
 
 
