@@ -221,16 +221,75 @@ function void test_extract_code (void)
     bundle B = _(xml_buffer, filename)
 
     # When
-    bundle Actual = extract_code(B)
-    Actual
-    stop
+    string code_1_expected = "/* Main public function. */\
+if !exists(opts)\
+  bundle opts = null\
+endif\
+bundle self = set_bundle_and_get_defaults(y, opts)\
+add_data_to_bundle(&self, y, xlist)\
+string self.name_yseries = argname(y)\
+string self.name_xlist = (nelem(xlist)) ? argname(xlist) : \"\"\
+do_initial_checks(&self)\
+if self.error\
+  return self\
+endif\
+prepare_arima_options_string(&self)\
+add_n_combinations(&self)\
+matrix self.parameter_matrix = get_parameter_matrix(self)\
+matrix self.criteria_values = initialize_criteria_values_mat(self)\
+estimate_models(&self)\
+rank_models_by_criteria(&self)\
+return self"
 
-get_path_number_of_functions
+    string code_2_expected = "/* Summarize parameter results for each information criteria. */\
+errorif(self.error == TRUE, \"The auto_arima() function throw some error. Please check.\")\
+print_table_border()\
+print_summary_intro(self)\
+print_table_header()\
+print_table_and_row_labels(self)\
+print_table_border()"
+
+    scalar n_functions_expected = 43
+
+    bundle Actual = extract_code(B)
+
+    scalar n_functions_actual = nelem(getkeys(Actual))
+    string code_1_actual = Actual.auto_arima.code
+    string code_2_actual = Actual.print_auto_arima_results.code
+
     # Then
-    then
+    assert(n_functions_actual == n_functions_expected)
+    assert(nelem(code_1_actual) == nelem(code_1_expected))
+    assert(nelem(code_2_actual) == nelem(code_2_expected))
 end function
 test_extract_code()
 
+
+function void test_print_pkgchecker(void)
+    print "Start testing print_pkgchecker()."
+
+    # Given
+    string filename = "./data/auto_arima.gfn"
+    bundle Meta = get_pkgdata(filename, TRUE)
+end function
+test_print_pkgchecker()
+
+
+function void test_check_pkgusage (void)
+    print "Start testing check_pkgusage()"
+
+    # Given
+    string filename = "./data/auto_arima.gfn"
+    bundle Meta = get_pkgdata(filename)
+
+    # When
+    when
+
+
+    # Then
+    then
+end function
+test_check_pkgusage()
 
 
 print "Finished all tests succesfully."

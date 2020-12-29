@@ -209,7 +209,8 @@ function bundle extract_code (const bundle self)
     return Codes
 end function
 
-function bundle get_pkgdata (const string filename "Path to gfn file")
+function bundle get_pkgdata (const string filename "Path to gfn file",
+                             const bool verbose[FALSE] "Print output")
     /* Main function */
 
     bundle self = null
@@ -259,13 +260,52 @@ function bundle get_pkgdata (const string filename "Path to gfn file")
         keys and check that the function is actually used somewhere. Of course,
         public functions won't be used within other functions...
 
-    D) Write tests
     */
 
-    eval getkeys(Metadata)[11]
-    eval Metadata["print_auto_arima_results"]
+    if verbose
+        print_pkgchecker(Metadata)
+    endif
 
     return Metadata
+end function
+
+
+function strings check_pkgusage (const bundle Metadata)
+    /* Check whether every function is actually called at least once. */
+
+    *** Compile a matrix of calls of a function (row) by some function (cols) **
+    *** Similar to a DAG ***
+
+
+end function
+
+
+
+
+function void print_pkgchecker (const bundle self "Bundle returned by get_pkgdata()")
+    /* Print summary of functions. */
+
+    strings function_names = getkeys(self)
+
+    printf "\n============================================================\n"
+    printf "\t\t%s\n\n", "Summary package function overview"
+    printf "%-31s %5s %12s\n", "Function name", "# Input params.",\
+        "Lines of Code"
+    printf "-------------------------------------------------------------\n"
+
+    loop foreach i function_names
+        print_function_details(self["$i"], "$i")
+    endloop
+    printf "============================================================\n"
+end function
+
+function void print_function_details (const bundle Function,
+                                      const string function_name)
+    scalar n_lines = nelem(strsplit(Function.code, "\n")) # delimiter in xml
+    scalar n_input = nelem(Function.parameter_names)
+    n_input = (n_input > 0) ? n_input : 0
+
+    printf "%-31s %5.d %18.d\n", function_name, n_input, n_lines
 end function
 
 
