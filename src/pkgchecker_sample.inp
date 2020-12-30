@@ -12,7 +12,10 @@ if EXAMPLE == 1
     eval Meta.auto_arima
     eval Meta.auto_arima.code
     */
-    check_pkgusage(Meta)
+    bundle Graph = get_function_usages(Meta)
+    Graph
+    eval Graph.n_function_calls
+    eval Graph.uncalled_functions
 
 stop
 

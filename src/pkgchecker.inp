@@ -256,10 +256,6 @@ function bundle get_pkgdata (const string filename "Path to gfn file",
     1) Store 'name' as string array in Codes.input_parameters
     2) Loop over "code" and check whether input parameters are used in code
 
-    C) For each function name (=key) iterate over code foreach other
-        keys and check that the function is actually used somewhere. Of course,
-        public functions won't be used within other functions...
-
     */
 
     if verbose
@@ -271,21 +267,46 @@ end function
 
 
 # TODO: test
-function matrix check_pkgusage (const bundle Metadata)
+function bundle get_function_usages (const bundle Metadata)
     /* Check whether every function is actually called at least once.*/
 
     matrix graph = compile_dependency_graph(Metadata)
+    matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
 
-    *** HIER WEITERMACHEN ***
-    matrix graph_statistics = summarize_graph(graph)
+    strings uncalled_functions = get_uncalled_functions(n_function_calls)
 
+    return _(graph, n_function_calls, uncalled_functions)
+end function
+
+function strings get_uncalled_functions (const matrix n_function_calls)
+    /* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
+
+    strings function_names = rnameget(n_function_calls)
+    strings uncalled = array(0)
+
+    if sumc((n_function_calls .= 0)) == 0
+        return uncalled
+    endif
+
+    loop i=1..rows(n_function_calls)
+        if n_function_calls[i] == 0
+            uncalled += function_names[i]
+        endif
+    endloop
+
+    return uncalled
 end function
 
 # TODO: test
-function matrix summarize_graph (const matrix graph)
-    /* Get vector with n rows where each row refers to a function. The respective value refers to the number of calls this specific function is called by other functions. */
+function matrix summarize_graph (const matrix graph,
+                                 const strings function_names)
+    /* Get vector with n rows where each row refers to a function. The respective value refers to the number of calls if this specific function by other functions. This helps one to detect unused functions. */
 
-    return sumr(graph)
+    matrix m = sumr(graph)
+    rnameset(m, function_names)
+    cnameset(m, defarray("# Calls"))
+
+    return m
 end function
 
 # TODO: test
@@ -299,12 +320,14 @@ function matrix compile_dependency_graph (const bundle Metadata)
         string function_searched = sprintf("%s(", "$i")
 
         loop foreach j Metadata
-            graph[i,j] = ("$i" == "$j") ? NA : graph[i,j]
-            if instring(Metadata["$j"].code, "$i")
+            if ("$i" != "$j") && instring(Metadata["$j"].code, "$i")
                 graph[i,j] = TRUE
             endif
         endloop
     endloop
+
+    rnameset(graph, getkeys(Metadata))
+    cnameset(graph, getkeys(Metadata))
 
     return graph
 end function
