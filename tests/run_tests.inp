@@ -283,7 +283,7 @@ function void test_check_pkgusage (void)
     bundle Meta = get_pkgdata(filename)
 
     # When
-    when
+    scalar n_funcs_not_called
 
 
     # Then

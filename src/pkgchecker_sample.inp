@@ -6,11 +6,13 @@ scalar EXAMPLE = 1
 
 if EXAMPLE == 1
     Meta = get_pkgdata("../data/auto_arima.xml", TRUE)
-    stop
+    /*
     print Meta
     eval nelem(Meta)
     eval Meta.auto_arima
     eval Meta.auto_arima.code
+    */
+    check_pkgusage(Meta)
 
 stop
 

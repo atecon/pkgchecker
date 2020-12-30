@@ -270,15 +270,44 @@ function bundle get_pkgdata (const string filename "Path to gfn file",
 end function
 
 
-function strings check_pkgusage (const bundle Metadata)
-    /* Check whether every function is actually called at least once. */
+# TODO: test
+function matrix check_pkgusage (const bundle Metadata)
+    /* Check whether every function is actually called at least once.*/
 
-    *** Compile a matrix of calls of a function (row) by some function (cols) **
-    *** Similar to a DAG ***
+    matrix graph = compile_dependency_graph(Metadata)
 
+    *** HIER WEITERMACHEN ***
+    matrix graph_statistics = summarize_graph(graph)
 
 end function
 
+# TODO: test
+function matrix summarize_graph (const matrix graph)
+    /* Get vector with n rows where each row refers to a function. The respective value refers to the number of calls this specific function is called by other functions. */
+
+    return sumr(graph)
+end function
+
+# TODO: test
+function matrix compile_dependency_graph (const bundle Metadata)
+    /* Compile a matrix of calls of a function (row) by some function (cols).
+     Comlexity level is quadratic.*/
+
+    matrix graph = zeros(nelem(Metadata), nelem(Metadata))
+
+    loop foreach i Metadata
+        string function_searched = sprintf("%s(", "$i")
+
+        loop foreach j Metadata
+            graph[i,j] = ("$i" == "$j") ? NA : graph[i,j]
+            if instring(Metadata["$j"].code, "$i")
+                graph[i,j] = TRUE
+            endif
+        endloop
+    endloop
+
+    return graph
+end function
 
 
 
