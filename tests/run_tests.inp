@@ -266,30 +266,81 @@ test_extract_code()
 
 
 function void test_print_pkgchecker(void)
-    print "Start testing print_pkgchecker()."
+    print "Start testing print_pkgchecker(). No real test though, just check that it throws no error."
 
     # Given
     string filename = "./data/auto_arima.gfn"
+    # When
     bundle Meta = get_pkgdata(filename, TRUE)
 end function
 test_print_pkgchecker()
 
 
-function void test_check_pkgusage (void)
-    print "Start testing check_pkgusage()"
+function void test_compile_dependency_graph (void)
+    print "Start testing compile_dependency_graph()."
 
     # Given
     string filename = "./data/auto_arima.gfn"
     bundle Meta = get_pkgdata(filename)
 
     # When
-    scalar n_funcs_not_called
+    matrix graph_actual = compile_dependency_graph(Meta)
+    scalar dim_expected = 43
+    scalar rows_actual = rows(graph_actual)
+    scalar cols_actual = cols(graph_actual)
 
+    scalar n_row_labels = nelem(rnameget(graph_actual))
+    scalar n_col_labels = nelem(cnameget(graph_actual))
 
     # Then
-    then
+    assert(rows_actual == dim_expected)
+    assert(cols_actual == dim_expected)
+    assert(n_row_labels == dim_expected)
+    assert(n_col_labels == dim_expected)
 end function
-test_check_pkgusage()
+test_compile_dependency_graph()
+
+
+function void test_get_uncalled_functions (void)
+    print "Start testing get_uncalled_functions()."
+
+    # Given
+    matrix input = {1, 0, 1, 0}'
+    rnameset(input, "A B C D")
+
+    # When
+    strings expected = defarray("B", "D")
+    strings actual = get_uncalled_functions(input)
+
+    # Then
+    assert(nelem(actual) == nelem(expected))
+    assert(actual[1] == expected[1])
+    assert(actual[2] == expected[2])
+end function
+test_get_uncalled_functions()
+
+
+function void test_get_function_usages (void)
+    print "Start testing get_function_usages()."
+
+    # Given
+    string filename = "./data/auto_arima.gfn"
+    bundle Meta = get_pkgdata(filename)
+
+    # When
+    bundle Output = get_function_usages(Meta)
+    scalar n_items_actual = 3
+    string item1_expected = "graph"
+    string item2_expected = "n_function_calls"
+    string item3_expected = "uncalled_functions"
+
+    # Then
+    assert(nelem(Output) == n_items_actual)
+    assert(inbundle(Output, item1_expected))
+    assert(inbundle(Output, item2_expected))
+    assert(inbundle(Output, item3_expected))
+end function
+test_get_function_usages()
 
 
 print "Finished all tests succesfully."

@@ -1,35 +1,22 @@
 set verbose off
-# include metadata.gfn
+# include pkgchecker.gfn
 include "/home/at/git/pkgchecker/src/pkgchecker.inp" --force
 
-scalar EXAMPLE = 1
-
-if EXAMPLE == 1
-    Meta = get_pkgdata("../data/auto_arima.xml", TRUE)
-    /*
-    print Meta
-    eval nelem(Meta)
-    eval Meta.auto_arima
-    eval Meta.auto_arima.code
-    */
-    bundle Graph = get_function_usages(Meta)
-    Graph
-    eval Graph.n_function_calls
-    eval Graph.uncalled_functions
-
-stop
-
-elif EXAMPLE == 2
-    Meta = get_metadata("data4-10.gdt")
-    print Meta
-    eval Meta.SeriesDetails.PUPIL
+Meta = get_pkgdata("../data/auto_arima.gfn", TRUE)
+/*
+print Meta
+eval nelem(Meta)
+eval Meta.auto_arima
+eval Meta.auto_arima.code
+*/
+bundle Graph = get_function_usages(Meta)
 
 
-elif EXAMPLE == 3   # also get 'markers'
-    open mrw.gdt -q
-    Meta = get_metadata("mrw.gdt", TRUE)
-    print Meta
-    eval Meta.SeriesDetails.nonoil.discrete
-    eval Meta.markers
-    eval Meta.markers[1]    # 1st marker value
-endif
+eval Graph.n_function_calls
+eval Graph.uncalled_functions
+
+/* include heatmap.gfn
+heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=1))
+heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=FALSE))
+*/
+

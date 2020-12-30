@@ -266,17 +266,16 @@ function bundle get_pkgdata (const string filename "Path to gfn file",
 end function
 
 
-# TODO: test
 function bundle get_function_usages (const bundle Metadata)
     /* Check whether every function is actually called at least once.*/
 
     matrix graph = compile_dependency_graph(Metadata)
     matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
-
     strings uncalled_functions = get_uncalled_functions(n_function_calls)
 
     return _(graph, n_function_calls, uncalled_functions)
 end function
+
 
 function strings get_uncalled_functions (const matrix n_function_calls)
     /* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
@@ -297,10 +296,12 @@ function strings get_uncalled_functions (const matrix n_function_calls)
     return uncalled
 end function
 
-# TODO: test
+
 function matrix summarize_graph (const matrix graph,
                                  const strings function_names)
     /* Get vector with n rows where each row refers to a function. The respective value refers to the number of calls if this specific function by other functions. This helps one to detect unused functions. */
+
+    assert(nelem(function_names) == rows(graph))
 
     matrix m = sumr(graph)
     rnameset(m, function_names)
@@ -309,7 +310,6 @@ function matrix summarize_graph (const matrix graph,
     return m
 end function
 
-# TODO: test
 function matrix compile_dependency_graph (const bundle Metadata)
     /* Compile a matrix of calls of a function (row) by some function (cols).
      Comlexity level is quadratic.*/
