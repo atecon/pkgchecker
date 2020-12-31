@@ -2,7 +2,7 @@ function scalar is_minimum_gretl_version (void)
     if $version >= 20205
         return TRUE
     else
-        printError("At minimum Gretl version 2020e required.")
+        Error("At minimum Gretl version 2020e required.")
         return FALSE
     endif
 end function
@@ -13,7 +13,7 @@ function scalar read_and_add_xml_buffer (bundle *self)
 
     catch self.xml_buffer = readfile(self.filename)
     if $error
-        printError(sprintf("Failed to read file '%s'. Abort.\n", self.filename))
+        Error(sprintf("Failed to read file '%s'. Abort.\n", self.filename))
         return TRUE
     else
         return FALSE
@@ -55,7 +55,7 @@ function string get_path_content (const string path "xpath identifier",
 
     catch path_content = xmlget(xml_buffer, path, &n_got)
     if $error
-        printWarning(sprintf("Failed to find the path '%s'. Ignore.", path))
+        Warning(sprintf("Failed to find the path '%s'. Ignore.", path))
     endif
 
     return path_content
@@ -188,7 +188,7 @@ function bundle extract_code (const bundle self)
     scalar n_functions = get_number_of_functions(self)
 
     if n_functions == 0
-        printWarning("Package includes no functions.")
+        Warning("Package includes no functions.")
         return Codes
     endif
 
@@ -196,11 +196,10 @@ function bundle extract_code (const bundle self)
         string function_name = get_function_name($i, self)
 
         if nelem(function_name) == 0
-            printWarning("Function not found. Ignore.")
+            Warning("Function not found. Ignore.")
             flush
         else
-            bundle Codes["@function_name"] = \
-                        _(code = get_code($i, self))
+            Codes["@function_name"] = _(code = get_code($i, self))
         endif
     endloop
 
@@ -211,18 +210,18 @@ end function
 
 function bundle get_pkgdata (const string filename "Path to gfn file",
                              const bool verbose[FALSE] "Print output")
-    /* Main function */
+    /* Main public function */
 
     bundle self = null
     string self.filename = filename
 
     if !is_minimum_gretl_version()
-        return null
+        return self
     endif
 
     err = read_and_add_xml_buffer(&self)
     if err
-        return null
+        return self
     endif
 
     bundle Metadata = extract_code(self)
@@ -255,7 +254,6 @@ function bundle get_pkgdata (const string filename "Path to gfn file",
     B) Apart from 'code' also parse names of params/param[i]/name
     1) Store 'name' as string array in Codes.input_parameters
     2) Loop over "code" and check whether input parameters are used in code
-
     */
 
     if verbose
@@ -267,17 +265,17 @@ end function
 
 
 function bundle get_function_usages (const bundle Metadata)
-    /* Check whether every function is actually called at least once.*/
+    /* Check which function is called by which. Identify unused functions. */
 
     matrix graph = compile_dependency_graph(Metadata)
     matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
-    strings uncalled_functions = get_uncalled_functions(n_function_calls)
+    strings dead_functions = get_names_dead_functions(n_function_calls)
 
-    return _(graph, n_function_calls, uncalled_functions)
+    return _(graph, n_function_calls, dead_functions)
 end function
 
 
-function strings get_uncalled_functions (const matrix n_function_calls)
+function strings get_names_dead_functions (const matrix n_function_calls)
     /* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
 
     strings function_names = rnameget(n_function_calls)
@@ -299,7 +297,7 @@ end function
 
 function matrix summarize_graph (const matrix graph,
                                  const strings function_names)
-    /* Get vector with n rows where each row refers to a function. The respective value refers to the number of calls if this specific function by other functions. This helps one to detect unused functions. */
+    /* Vector with n rows where each row refers to a function. The respective value refers to the number of calls if this specific function is called by other functions. Helps to detect unused functions. */
 
     assert(nelem(function_names) == rows(graph))
 
@@ -311,8 +309,8 @@ function matrix summarize_graph (const matrix graph,
 end function
 
 function matrix compile_dependency_graph (const bundle Metadata)
-    /* Compile a matrix of calls of a function (row) by some function (cols).
-     Comlexity level is quadratic.*/
+    /* Compile a matrix of calls of a function (row) by some other function
+    (cols). Complexity level is quadratic. */
 
     matrix graph = zeros(nelem(Metadata), nelem(Metadata))
 
@@ -361,14 +359,14 @@ function void print_function_details (const bundle Function,
 end function
 
 
-function void printInfo (const string s)
+function void Info (const string s)
     printf "\nInfo: %s\n", s
 end function
 
-function void printWarning (const string s)
+function void Warning (const string s)
     printf "\nWarning: %s\n", s
 end function
 
-function void printError (const string s)
+function void Error (const string s)
     printf "\nError: %s\n", s
 end function

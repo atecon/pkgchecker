@@ -15,8 +15,10 @@ bundle Graph = get_function_usages(Meta)
 eval Graph.n_function_calls
 eval Graph.uncalled_functions
 
-/* include heatmap.gfn
-heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=1))
-heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=FALSE))
-*/
+#/*
+include heatmap.gfn
+#heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=1))
+#heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=FALSE))
+heatmap(Graph.graph, _(title="Just a title", zerowhite=TRUE, do_labels=FALSE))
+#*/
 

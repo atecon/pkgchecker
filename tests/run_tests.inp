@@ -301,8 +301,8 @@ end function
 test_compile_dependency_graph()
 
 
-function void test_get_uncalled_functions (void)
-    print "Start testing get_uncalled_functions()."
+function void test_get_dead_functions (void)
+    print "Start testing get_names_dead_functions()."
 
     # Given
     matrix input = {1, 0, 1, 0}'
@@ -310,14 +310,14 @@ function void test_get_uncalled_functions (void)
 
     # When
     strings expected = defarray("B", "D")
-    strings actual = get_uncalled_functions(input)
+    strings actual = get_names_dead_functions(input)
 
     # Then
     assert(nelem(actual) == nelem(expected))
     assert(actual[1] == expected[1])
     assert(actual[2] == expected[2])
 end function
-test_get_uncalled_functions()
+test_get_dead_functions()
 
 
 function void test_get_function_usages (void)
@@ -332,7 +332,7 @@ function void test_get_function_usages (void)
     scalar n_items_actual = 3
     string item1_expected = "graph"
     string item2_expected = "n_function_calls"
-    string item3_expected = "uncalled_functions"
+    string item3_expected = "dead_functions"
 
     # Then
     assert(nelem(Output) == n_items_actual)

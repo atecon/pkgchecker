@@ -1,4 +1,15 @@
+The pkgchecker package supports the retrieval of various metadata from
+gdt data files. These data files are stored in a structured way following
+the xml standard.
 
+Please ask questions and report bugs on the gretl mailing list if possible.
+Alternatively, create an issue ticket on the github repo (see below).
+
+Source code and test script(s) can be found here:
+https://github.com/atecon/metadata
+
+
+The package comprises two public functions.
 
 Public functions:
 
@@ -7,3 +18,66 @@ get_pkgdata()
 get_function_usages()
 
 print_pkgchecker()
+
+
+
+get_metadata()
+--------------
+filename:   string, Full path to a gdt file
+
+This function consumes a gdt file, and extracts various metadata (see
+below).
+
+return:     Bundle holding metadata.
+
+
+print_metadata()
+----------------
+self:         bundle, Bundle returned by the get_metadata() function.
+
+get_markers:  bool, Flag whether to parse markers if existent (
+              default: FALSE), optional
+
+This function prints a summary of metadata information obtained from
+get_metadata().
+
+return:     nothing
+
+
+Metadata items:
+---------------
+name:             Name of the data file
+frequency:        Frequency of the data
+t1:               Starting observation
+t2:               Ending observation
+pd:               Periodicity
+type:             Type of the underlying data, e.g. time-series
+description:      String of the description
+nvar:             Number of series in data set
+version:          Version of data set
+n_strings_var:    Number of string-valued series
+SeriesDetails:    Bundle comprising information for each of the nvar series.
+string_values:    String array including the distinct string values of a
+                  string valued series only.
+discrete:         Boolean flag indicating whether a series is discrete
+                  (TRUE) or not (FALSE)
+markers:          String array holding the consecutive marker labels.
+
+
+The bundle SeriesDetails structures information as follows:
+
+SeriesDetails
+    -| <NAME_OF_SERIES_1>
+        -| label (string)
+        -| string_values (string array)
+        -| discrete (bool)
+    -| <NAME_OF_SERIES_2>
+        -| label (string)
+        -| string_values (string array)
+        -| discrete (bool)
+
+
+
+Change-log:
+---------
+v0.1 (01-2021): initial release
