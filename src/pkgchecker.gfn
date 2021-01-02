@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gretl-functions>
+<gretl-function-package name="pkgchecker" no-data-ok="true" minver="2020a">
+<author email="atecon@posteo.de">Artur Tarassow</author>
+<version>0.1</version>
+<date>2021-01-02</date>
+<description>Analyze a package and search for 'dead' code</description>
+<tags>C81</tags>
+<help>
+&quot;pkgchecker&quot; supports the retrieval of various information from gfn gretl
+function package files such as:
+- unused (dead) functions
+- number of functions
+- length of functions
+- names of input parameters
+- first-level function dependencies
+- number of calls of a function by other functions
+
+TODOs:
+- detect unused variables/ parameters
+- detect when assignments to existing variables are not used
+
+
+Please ask questions and report bugs on the gretl mailing list if possible.
+Alternatively, create an issue ticket on the github repo (see below).
+
+Source code and test script(s) can be found here:
+https://github.com/atecon/pkgchecker
+
+
+The package comprises three public functions.
+
+
+get_pkgdata(filename)
+---------------------
+filename:   string, Full path to a gfn file
+
+This function consumes a gfn file, compiles various metadata for each function.
+
+return:     bundle; Each key refers to a function of the package. The
+            value is another bundle comprising the following key-value pairs:
+            code: string holding the code
+            parameter_names: string array holding names of input parameters
+
+            The bundle structure is as follows:
+
+            Codes (bundle)
+            |-function_name1
+                |-code (string)
+                |-parameter_names (string array)
+                    |- [Name1, Name2,..., NameN]
+            |-function_name2
+                |-code (string)
+                |-parameter_names (string array)
+                    |- [Name1, Name2,..., NameN]
+
+
+print_pkgsummary(self)
+------------------
+self:       bundle, Bundle returned by get_pkgdata().
+
+This function prints a summary of the 'self' bundle such as the function name,
+the number of input parameters and the lines of code.
+
+return:     nothing
+
+
+function_statistics(self)
+---------------------
+self:       bundle, Bundle returned by get_pkgdata().
+
+This function computes various information, and compiles a bundle including:
+'graph':          Matrix indicating the first-level dependencies between
+                  functions: Value of 1 indicates a relationship, otherwise
+                  zero; row-dimension: function called by some other functions;
+                  column-dimension: functions actually calling the function.
+n_function_calls: Vector holding the number of function calls for each of the
+                  'n' total functions
+dead_functions:   string array, Names of functions not called by other
+                  functions; NOTE: such functions might be 'dead' but may
+                  also be public functions instead.
+
+return:           bundle
+
+
+
+Change-log:
+---------
+v0.1 (01-2021): initial release
+</help>
+<gretl-function name="get_pkgdata" type="bundle">
+ <params count="1">
+  <param name="filename" type="string" const="true">
+<description>Path to gfn file</description>
+  </param>
+ </params>
+<code>/* Main public function */
+bundle self = null
+string self.filename = filename
+if !is_minimum_gretl_version()
+  return self
+endif
+err = read_and_add_xml_buffer(&amp;self)
+if err
+  return self
+endif
+bundle Metadata = extract_code(self)
+if nelem(Metadata) == 0
+  return self
+endif
+bundle Metadata = extract_parameters(Metadata, self)
+return Metadata
+</code>
+</gretl-function>
+<gretl-function name="function_statistics" type="bundle">
+ <params count="1">
+  <param name="Metadata" type="bundle" const="true"/>
+ </params>
+<code>/* Check which function is called by which. Identify unused functions. */
+matrix graph = compile_dependency_graph(Metadata)
+matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
+strings dead_functions = get_names_dead_functions(n_function_calls)
+return _(graph, n_function_calls, dead_functions)
+</code>
+</gretl-function>
+<gretl-function name="print_pkgsummary" type="void">
+ <params count="1">
+  <param name="self" type="bundle" const="true">
+<description>Bundle returned by get_pkgdata()</description>
+  </param>
+ </params>
+<code>/* Print summary of functions. */
+strings function_names = getkeys(self)
+printf &quot;\n============================================================\n&quot;
+printf &quot;\t\t%s\n\n&quot;, &quot;Summary package function overview&quot;
+printf &quot;%-31s %5s %12s\n&quot;, &quot;Function name&quot;, &quot;# Input params.&quot;, &quot;Lines of Code&quot;
+printf &quot;-------------------------------------------------------------\n&quot;
+loop foreach i function_names
+  print_function_details(self[&quot;$i&quot;], &quot;$i&quot;)
+endloop
+printf &quot;============================================================\n&quot;
+</code>
+</gretl-function>
+<gretl-function name="is_minimum_gretl_version" type="scalar" private="1">
+<code>if $version &gt;= 20205
+  return TRUE
+else
+  Error(&quot;At minimum Gretl version 2020e required.&quot;)
+  return FALSE
+endif
+</code>
+</gretl-function>
+<gretl-function name="read_and_add_xml_buffer" type="scalar" private="1">
+ <params count="1">
+  <param name="self" type="bundleref"/>
+ </params>
+<code>/* Read gdt file which has a xml structure. */
+catch self.xml_buffer = readfile(self.filename)
+if $error
+  Error(sprintf(&quot;Failed to read file '%s'. Abort.\n&quot;, self.filename))
+  return TRUE
+else
+  return FALSE
+endif
+</code>
+</gretl-function>
+<gretl-function name="trim_extra_lines" type="string" private="1">
+ <params count="1">
+  <param name="buffer" type="string" const="true"/>
+ </params>
+<code>if nelem(buffer) == 0
+  return buffer
+endif
+strings content = strsplit(buffer, &quot;\n&quot;)
+scalar n = nelem(content)
+if n == 1
+  return content[n]
+endif
+return content
+</code>
+</gretl-function>
+<gretl-function name="get_path_content" type="string" private="1">
+ <params count="3">
+  <param name="path" type="string" const="true">
+<description>xpath identifier</description>
+  </param>
+  <param name="xml_buffer" type="string" const="true"/>
+  <param name="n_got" type="scalarref">
+<description>Number of occurences of path</description>
+  </param>
+ </params>
+<code>/* Extract content of some path in xml. */
+string path_content
+catch path_content = xmlget(xml_buffer, path, &amp;n_got)
+if $error
+  Warning(sprintf(&quot;Failed to find the path '%s'. Ignore.&quot;, path))
+endif
+return path_content
+</code>
+</gretl-function>
+<gretl-function name="get_number_of_functions" type="scalar" private="1">
+ <params count="1">
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Get number of functions of package. */
+scalar n_functions = 0
+scalar valid = TRUE
+scalar counter = 1
+loop while valid == TRUE
+  scalar n_got = 0
+  string path = get_path_code(get_function_path(), counter)
+  string foo = get_path_content(path, self.xml_buffer, &amp;n_got)
+  if n_got
+    n_functions++
+    counter++
+  else
+    break
+  endif
+endloop
+return n_functions
+</code>
+</gretl-function>
+<gretl-function name="get_function_path" type="string" private="1">
+<code>/* Configure path which should be parsed. */
+return &quot;//gretl-functions/gretl-function-package&quot;
+</code>
+</gretl-function>
+<gretl-function name="get_path_code" type="string" private="1">
+ <params count="2">
+  <param name="function_path" type="string" const="true"/>
+  <param name="item" type="int" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+ </params>
+<code>/* Compile path for retrieving code' for i-th function definition. */
+return sprintf(&quot;%s/gretl-function[%d]/code&quot;, function_path, item)
+</code>
+</gretl-function>
+<gretl-function name="get_path_code_name" type="string" private="1">
+ <params count="2">
+  <param name="function_path" type="string" const="true"/>
+  <param name="item" type="int" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+ </params>
+<code>/* Compile path for retrieving function's name for the i-th function definition. */
+return sprintf(&quot;%s/gretl-function[%d]/@name&quot;, function_path, item)
+</code>
+</gretl-function>
+<gretl-function name="get_code" type="string" private="1">
+ <params count="2">
+  <param name="item" type="scalar" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Retrieve function name for the i-th function. */
+scalar n_got = 0
+string path = get_path_code(get_function_path(), item)
+return get_path_content(path, self.xml_buffer, &amp;n_got)
+</code>
+</gretl-function>
+<gretl-function name="get_path_count_parameters" type="string" private="1">
+ <params count="2">
+  <param name="function_path" type="string" const="true"/>
+  <param name="item" type="int" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+ </params>
+<code>return sprintf(&quot;%s/gretl-function[%d]/params/@count&quot;, function_path, item)
+</code>
+</gretl-function>
+<gretl-function name="get_number_of_parameters" type="scalar" private="1">
+ <params count="2">
+  <param name="item" type="int" min="1" const="true"/>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Get number of parameters for a specific functions. */
+scalar n_parameters = 0
+string path = get_path_count_parameters(get_function_path(), item)
+return atof(get_path_content(path, self.xml_buffer, &amp;n_parameters))
+</code>
+</gretl-function>
+<gretl-function name="get_path_parameter_name" type="string" private="1">
+ <params count="3">
+  <param name="function_path" type="string" const="true"/>
+  <param name="item" type="int" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+  <param name="iparam" type="int" min="1" const="true">
+<description>n-th parameter</description>
+  </param>
+ </params>
+<code>/* Retrieve name of input parameter. */
+return sprintf(&quot;%s/gretl-function[%d]/params/param[%d]/@name&quot;, function_path, item, iparam)
+</code>
+</gretl-function>
+<gretl-function name="get_parameter_names" type="strings" private="1">
+ <params count="2">
+  <param name="item" type="scalar" min="1" const="true">
+<description>i-th function</description>
+  </param>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Retrieve function name for the i-th function. */
+scalar n_parameters = get_number_of_parameters(item, self)
+if ok(n_parameters)
+  strings names = array(n_parameters)
+else
+  return array(0) # function has void input
+endif
+loop i=1..n_parameters
+  scalar n_got = 0
+  string path = get_path_parameter_name(get_function_path(), item, i)
+  names[i] = strstrip(get_path_content(path, self.xml_buffer, &amp;n_got))
+endloop
+return names
+</code>
+</gretl-function>
+<gretl-function name="get_function_name" type="string" private="1">
+ <params count="2">
+  <param name="item" type="scalar" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Retrieve function name for the i-th function. */
+scalar n_got = 0
+string path = get_path_code_name(get_function_path(), item)
+string function_name = get_path_content(path, self.xml_buffer, &amp;n_got)
+return trim_extra_lines(function_name)
+</code>
+</gretl-function>
+<gretl-function name="extract_parameters" type="bundle" private="1">
+ <params count="2">
+  <param name="Metadata" type="bundle"/>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Extract input parameters for each function. */
+strings function_names = getkeys(Metadata)
+loop foreach i function_names
+  Metadata[&quot;$i&quot;].parameter_names = get_parameter_names(i, self)
+endloop
+return Metadata
+</code>
+</gretl-function>
+<gretl-function name="extract_code" type="bundle" private="1">
+ <params count="1">
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Compile a key-value store.
+key: Function name
+value: String holding the i-th function code */
+bundle Codes
+scalar n_functions = get_number_of_functions(self)
+if n_functions == 0
+  Warning(&quot;Package includes no functions.&quot;)
+  return Codes
+endif
+loop i=1..n_functions
+  string function_name = get_function_name($i, self)
+  if nelem(function_name) == 0
+    Warning(&quot;Function not found. Ignore.&quot;)
+    flush
+  else
+    Codes[&quot;@function_name&quot;] = _(code = get_code($i, self))
+  endif
+endloop
+assert(n_functions == nelem(Codes))
+return Codes
+</code>
+</gretl-function>
+<gretl-function name="get_names_dead_functions" type="strings" private="1">
+ <params count="1">
+  <param name="n_function_calls" type="matrix" const="true"/>
+ </params>
+<code>/* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
+strings function_names = rnameget(n_function_calls)
+strings uncalled = array(0)
+if sumc((n_function_calls .= 0)) == 0
+  return uncalled
+endif
+loop i=1..rows(n_function_calls)
+  if n_function_calls[i] == 0
+    uncalled += function_names[i]
+  endif
+endloop
+return uncalled
+</code>
+</gretl-function>
+<gretl-function name="summarize_graph" type="matrix" private="1">
+ <params count="2">
+  <param name="graph" type="matrix" const="true"/>
+  <param name="function_names" type="strings" const="true"/>
+ </params>
+<code>/* Vector with n rows where each row refers to a function. The respective value refers to the number of calls if this specific function is called by other functions. Helps to detect unused functions. */
+assert(nelem(function_names) == rows(graph))
+matrix m = sumr(graph)
+rnameset(m, function_names)
+cnameset(m, defarray(&quot;# of calls&quot;))
+return m
+</code>
+</gretl-function>
+<gretl-function name="compile_dependency_graph" type="matrix" private="1">
+ <params count="1">
+  <param name="Metadata" type="bundle" const="true"/>
+ </params>
+<code>/* Compile a matrix of calls of a function (row) by some other function
+(cols). Complexity level is quadratic. */
+matrix graph = zeros(nelem(Metadata), nelem(Metadata))
+loop foreach i Metadata
+  string function_searched = sprintf(&quot;%s(&quot;, &quot;$i&quot;)
+  loop foreach j Metadata
+    if (&quot;$i&quot; != &quot;$j&quot;) &amp;&amp; instring(Metadata[&quot;$j&quot;].code, &quot;$i&quot;)
+      graph[i,j] = TRUE
+    endif
+  endloop
+endloop
+rnameset(graph, getkeys(Metadata))
+cnameset(graph, getkeys(Metadata))
+return graph
+</code>
+</gretl-function>
+<gretl-function name="print_function_details" type="void" private="1">
+ <params count="2">
+  <param name="Function" type="bundle" const="true"/>
+  <param name="function_name" type="string" const="true"/>
+ </params>
+<code>scalar n_lines = nelem(strsplit(Function.code, &quot;\n&quot;)) # delimiter in xml
+scalar n_input = nelem(Function.parameter_names)
+n_input = (n_input &gt; 0) ? n_input : 0
+printf &quot;%-31s %5.d %18.d\n&quot;, function_name, n_input, n_lines
+</code>
+</gretl-function>
+<gretl-function name="Info" type="void" private="1">
+ <params count="1">
+  <param name="s" type="string" const="true"/>
+ </params>
+<code>printf &quot;\nInfo: %s\n&quot;, s
+</code>
+</gretl-function>
+<gretl-function name="Warning" type="void" private="1">
+ <params count="1">
+  <param name="s" type="string" const="true"/>
+ </params>
+<code>printf &quot;\nWarning: %s\n&quot;, s
+</code>
+</gretl-function>
+<gretl-function name="Error" type="void" private="1">
+ <params count="1">
+  <param name="s" type="string" const="true"/>
+ </params>
+<code>printf &quot;\nError: %s\n&quot;, s
+</code>
+</gretl-function>
+<sample-script>
+set verbose off
+include pkgchecker.gfn
+
+# Install example package file (if not installed, yet)
+# pkg install auto_arima
+
+string filename = sprintf(&quot;%s/functions/auto_arima.gfn&quot;, $dotdir)
+Meta = get_pkgdata(filename)
+
+print_pkgsummary(Meta)
+
+bundle Graph = function_statistics(Meta)
+print Graph
+
+eval Graph.n_function_calls
+eval Graph.dead_functions
+
+# Access code of a function
+eval Meta.auto_arima.code
+
+
+/*
+# Plot dependencies -- requires heatmap package
+catch include heatmap.gfn
+if $error
+    pkg install heatmap # requires internet connection
+    include heatmap.gfn
+endif
+heatmap(Graph.graph, _(title=&quot;1st level dependency (rows&quot;, do_labels=FALSE))
+*/
+</sample-script>
+</gretl-function-package>
+</gretl-functions>

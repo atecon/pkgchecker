@@ -1,0 +1,80 @@
+"pkgchecker" supports the retrieval of various information from gfn gretl
+function package files such as:
+- unused (dead) functions
+- number of functions
+- length of functions
+- names of input parameters
+- first-level function dependencies
+- number of calls of a function by other functions
+
+TODOs:
+- detect unused variables/ parameters
+- detect when assignments to existing variables are not used
+
+
+Please ask questions and report bugs on the gretl mailing list if possible.
+Alternatively, create an issue ticket on the github repo (see below).
+
+Source code and test script(s) can be found here:
+https://github.com/atecon/pkgchecker
+
+
+The package comprises three public functions.
+
+
+get_pkgdata(filename)
+---------------------
+filename:   string, Full path to a gfn file
+
+This function consumes a gfn file, compiles various metadata for each function.
+
+return:     bundle; Each key refers to a function of the package. The
+            value is another bundle comprising the following key-value pairs:
+            code: string holding the code
+            parameter_names: string array holding names of input parameters
+
+            The bundle structure is as follows:
+
+            Codes (bundle)
+            |-function_name1
+                |-code (string)
+                |-parameter_names (string array)
+                    |- [Name1, Name2,..., NameN]
+            |-function_name2
+                |-code (string)
+                |-parameter_names (string array)
+                    |- [Name1, Name2,..., NameN]
+
+
+print_pkgsummary(self)
+------------------
+self:       bundle, Bundle returned by get_pkgdata().
+
+This function prints a summary of the 'self' bundle such as the function name,
+the number of input parameters and the lines of code.
+
+return:     nothing
+
+
+function_statistics(self)
+---------------------
+self:       bundle, Bundle returned by get_pkgdata().
+
+This function computes various information, and compiles a bundle including:
+'graph':          Matrix indicating the first-level dependencies between
+                  functions: Value of 1 indicates a relationship, otherwise
+                  zero; row-dimension: function called by some other functions;
+                  column-dimension: functions actually calling the function.
+n_function_calls: Vector holding the number of function calls for each of the
+                  'n' total functions
+dead_functions:   string array, Names of functions not called by other
+                  functions; NOTE: such functions might be 'dead' but may
+                  also be public functions instead.
+
+return:           bundle
+
+
+
+Change-log:
+---------
+v0.1 (01-2021): initial release

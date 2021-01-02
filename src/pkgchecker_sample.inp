@@ -1,24 +1,31 @@
 set verbose off
-# include pkgchecker.gfn
-include "/home/at/git/pkgchecker/src/pkgchecker.inp" --force
+include pkgchecker.gfn
 
-Meta = get_pkgdata("../data/auto_arima.gfn", TRUE)
-/*
-print Meta
-eval nelem(Meta)
-eval Meta.auto_arima
-eval Meta.auto_arima.code
-*/
-bundle Graph = get_function_usages(Meta)
+# Install example package file (if not installed, yet)
+# pkg install auto_arima
 
+string filename = sprintf("%s/functions/auto_arima.gfn", $dotdir)
+Meta = get_pkgdata(filename)
+
+print_pkgsummary(Meta)
+
+bundle Graph = function_statistics(Meta)
+print Graph
 
 eval Graph.n_function_calls
-eval Graph.uncalled_functions
+eval Graph.dead_functions
 
-#/*
-include heatmap.gfn
-#heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=1))
-#heatmap(Graph.graph, _(title="Just a title", zerowhite=FALSE, do_labels=FALSE))
-heatmap(Graph.graph, _(title="Just a title", zerowhite=TRUE, do_labels=FALSE))
-#*/
+# Access code of a function
+eval Meta.auto_arima.code
+
+
+/*
+# Plot dependencies -- requires heatmap package
+catch include heatmap.gfn
+if $error
+    pkg install heatmap # requires internet connection
+    include heatmap.gfn
+endif
+heatmap(Graph.graph, _(title="1st level dependency (rows", do_labels=FALSE))
+*/
 

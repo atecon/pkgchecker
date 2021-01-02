@@ -265,15 +265,16 @@ end function
 test_extract_code()
 
 
-function void test_print_pkgchecker(void)
-    print "Start testing print_pkgchecker(). No real test though, just check that it throws no error."
+function void test_print_pkgsummary(void)
+    print "Start testing print_pkgsummary(). No real test though, just check that it throws no error."
 
     # Given
     string filename = "./data/auto_arima.gfn"
     # When
-    bundle Meta = get_pkgdata(filename, TRUE)
+    bundle Meta = get_pkgdata(filename)
+    print_pkgsummary(Meta)
 end function
-test_print_pkgchecker()
+test_print_pkgsummary()
 
 
 function void test_compile_dependency_graph (void)
@@ -320,15 +321,15 @@ end function
 test_get_dead_functions()
 
 
-function void test_get_function_usages (void)
-    print "Start testing get_function_usages()."
+function void test_function_statistics (void)
+    print "Start testing function_statistics()."
 
     # Given
     string filename = "./data/auto_arima.gfn"
     bundle Meta = get_pkgdata(filename)
 
     # When
-    bundle Output = get_function_usages(Meta)
+    bundle Output = function_statistics(Meta)
     scalar n_items_actual = 3
     string item1_expected = "graph"
     string item2_expected = "n_function_calls"
@@ -340,7 +341,7 @@ function void test_get_function_usages (void)
     assert(inbundle(Output, item2_expected))
     assert(inbundle(Output, item3_expected))
 end function
-test_get_function_usages()
+test_function_statistics()
 
 
 print "Finished all tests succesfully."

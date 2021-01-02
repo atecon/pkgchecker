@@ -7,7 +7,6 @@ function scalar is_minimum_gretl_version (void)
     endif
 end function
 
-# FROM metadata
 function scalar read_and_add_xml_buffer (bundle *self)
     /* Read gdt file which has a xml structure. */
 
@@ -20,10 +19,7 @@ function scalar read_and_add_xml_buffer (bundle *self)
     endif
 end function
 
-# TODO: Really needed here? I don't think so
 function string trim_extra_lines (const string buffer)
-    /* */
-
     if nelem(buffer) == 0
         return buffer
     endif
@@ -38,14 +34,6 @@ function string trim_extra_lines (const string buffer)
 end function
 
 
-function string get_function_path (void)
-    /* Configure path which should be parsed. */
-
-    return "//gretl-functions/gretl-function-package"
-end function
-
-
-# FROM metadata
 function string get_path_content (const string path "xpath identifier",
                                   const string xml_buffer,
                                   scalar *n_got "Number of occurences of path")
@@ -83,6 +71,12 @@ function scalar get_number_of_functions (const bundle self)
 
     return n_functions
 end function
+
+function string get_function_path (void)
+    /* Configure path which should be parsed. */
+    return "//gretl-functions/gretl-function-package"
+end function
+
 
 function string get_path_code (const string function_path,
                                const int item[1::] "i-th function code")
@@ -208,8 +202,7 @@ function bundle extract_code (const bundle self)
     return Codes
 end function
 
-function bundle get_pkgdata (const string filename "Path to gfn file",
-                             const bool verbose[FALSE] "Print output")
+function bundle get_pkgdata (const string filename "Path to gfn file")
     /* Main public function */
 
     bundle self = null
@@ -231,40 +224,11 @@ function bundle get_pkgdata (const string filename "Path to gfn file",
 
     bundle Metadata = extract_parameters(Metadata, self)
 
-
-    /*
-    *** NEXT:
-    A) Look at unused variables within a function
-    1) Loop over each key (=function)
-    2) Cast code for the i-th function as string array (\n as delimiter)
-    3) extract assignments and check whether RHS variables is used
-        somewhere or returned
-
-    Codes (bundle)
-        |-function_name1
-            |-Code (string)
-            |-parameter_names (string array)
-                |- [Name1, Name2,..., NameN]
-        |-function_name2
-            |-Code (string)
-            |-parameter_names (string array)
-                |- [Name1, Name2,..., NameN]
-
-
-    B) Apart from 'code' also parse names of params/param[i]/name
-    1) Store 'name' as string array in Codes.input_parameters
-    2) Loop over "code" and check whether input parameters are used in code
-    */
-
-    if verbose
-        print_pkgchecker(Metadata)
-    endif
-
     return Metadata
 end function
 
 
-function bundle get_function_usages (const bundle Metadata)
+function bundle function_statistics (const bundle Metadata)
     /* Check which function is called by which. Identify unused functions. */
 
     matrix graph = compile_dependency_graph(Metadata)
@@ -303,7 +267,7 @@ function matrix summarize_graph (const matrix graph,
 
     matrix m = sumr(graph)
     rnameset(m, function_names)
-    cnameset(m, defarray("# Calls"))
+    cnameset(m, defarray("# of calls"))
 
     return m
 end function
@@ -332,7 +296,7 @@ end function
 
 
 
-function void print_pkgchecker (const bundle self "Bundle returned by get_pkgdata()")
+function void print_pkgsummary (const bundle self "Bundle returned by get_pkgdata()")
     /* Print summary of functions. */
 
     strings function_names = getkeys(self)
