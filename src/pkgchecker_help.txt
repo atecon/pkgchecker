@@ -31,6 +31,7 @@ This function consumes a gfn file, compiles various metadata for each function.
 return:     bundle; Each key refers to a function of the package. The
             value is another bundle comprising the following key-value pairs:
             code: string holding the code
+            is_private: bool, zero if public function, otherwise one
             parameter_names: string array holding names of input parameters
 
             The bundle structure is as follows:
@@ -38,10 +39,12 @@ return:     bundle; Each key refers to a function of the package. The
             Codes (bundle)
             |-function_name1
                 |-code (string)
+                |-is_private (bool)
                 |-parameter_names (string array)
                     |- [Name1, Name2,..., NameN]
             |-function_name2
                 |-code (string)
+                |-is_private (bool)
                 |-parameter_names (string array)
                     |- [Name1, Name2,..., NameN]
 

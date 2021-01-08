@@ -90,9 +90,17 @@ function string get_path_code_name (const string function_path,
     return sprintf("%s/gretl-function[%d]/@name", function_path, item)
 end function
 
+
+function string get_path_func_private_state (const string function_path,
+                                             const int item[1::] "i-th function code")
+    /* Compile path for retrieving privacy state for the i-th function definition. */
+    return sprintf("%s/gretl-function[%d]/@private", function_path, item)
+end function
+
+
 function string get_code (const scalar item[1::] "i-th function code",
                           const bundle self)
-    /* Retrieve function name for the i-th function. */
+    /* Retrieve name of the i-th function. */
 
     scalar n_got = 0
     string path = get_path_code(get_function_path(), item)
@@ -147,7 +155,6 @@ function strings get_parameter_names (const scalar item[1::] "i-th function",
 end function
 
 
-
 function string get_function_name (const scalar item[1::] "i-th function code",
                                    const bundle self)
     /* Retrieve function name for the i-th function. */
@@ -158,6 +165,21 @@ function string get_function_name (const scalar item[1::] "i-th function code",
 
     return trim_extra_lines(function_name)
 end function
+
+
+function scalar get_function_privacy (const scalar item[1::] "i-th function",
+                                      const bundle self)
+    /* Retrieve function's privacy status. */
+
+    scalar n_got = 0
+    string path = get_path_func_private_state(get_function_path(), item)
+    string state = get_path_content(path, self.xml_buffer, &n_got)
+
+    scalar priv = (nelem(state) > 0) ? TRUE : FALSE
+
+    return priv
+end function
+
 
 function bundle extract_parameters (bundle Metadata,
                                     const bundle self)
@@ -193,7 +215,8 @@ function bundle extract_code (const bundle self)
             Warning("Function not found. Ignore.")
             flush
         else
-            Codes["@function_name"] = _(code = get_code($i, self))
+            Codes["@function_name"] = _(code = get_code($i, self),\
+                                        is_private = get_function_privacy($i, self))
         endif
     endloop
 
@@ -295,7 +318,6 @@ function matrix compile_dependency_graph (const bundle Metadata)
 end function
 
 
-
 function void print_pkgsummary (const bundle self "Bundle returned by get_pkgdata()")
     /* Print summary of functions. */
 
@@ -303,23 +325,24 @@ function void print_pkgsummary (const bundle self "Bundle returned by get_pkgdat
 
     printf "\n============================================================\n"
     printf "\t\t%s\n\n", "Summary package function overview"
-    printf "%-31s %5s %12s\n", "Function name", "# Input params.",\
-        "Lines of Code"
+    printf "%-31s %5s %5s %12s\n", "Function name", "# Params.",\
+        "Private", "Lines of Code"
     printf "-------------------------------------------------------------\n"
 
     loop foreach i function_names
-        print_function_details(self["$i"], "$i")
+        print_function_details(self["$i"], "$i", self["$i"].is_private)
     endloop
     printf "============================================================\n"
 end function
 
 function void print_function_details (const bundle Function,
-                                      const string function_name)
+                                      const string function_name,
+                                      const bool is_private)
     scalar n_lines = nelem(strsplit(Function.code, "\n")) # delimiter in xml
     scalar n_input = nelem(Function.parameter_names)
-    n_input = (n_input > 0) ? n_input : 0
+    #n_input = (n_input > 0) ? n_input : 0
 
-    printf "%-31s %5.d %18.d\n", function_name, n_input, n_lines
+    printf "%-31s %5d %8d %8d\n", function_name, n_input, is_private, n_lines
 end function
 
 

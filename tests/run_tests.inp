@@ -128,26 +128,46 @@ end function
 test_get_parameter_names()
 
 
-
-function void test_get_function_name (void)
+bundles Parameters = array(0)
+Parameters = Parameters + _(id = 1, expected = "auto_arima")
+Parameters = Parameters + _(id = 2, expected = "print_auto_arima_results")
+function void test_get_function_name (const bundles P)
     print "Start testing get_function_name()"
+
+     # Given
+    string xml_buffer = readfile("./data/auto_arima.gfn")
+    bundle B = _(xml_buffer)
+
+    # When + Then
+    loop i=1..nelem(P)
+        string actual = get_function_name(P[i].id, B)
+        assert(actual == P[i].expected)
+    endloop
+end function
+test_get_function_name(Parameters)
+
+
+bundles Parameters = array(0)
+Parameters = Parameters + _(id = 1, expected = FALSE)
+Parameters = Parameters + _(id = 2, expected = FALSE)
+Parameters = Parameters + _(id = 3, expected = FALSE)
+Parameters = Parameters + _(id = 11, expected = TRUE)
+Parameters = Parameters + _(id = 33, expected = TRUE)
+function void test_get_function_privacy (const bundles P)
+    print "Start testing get_function_privacy()"
 
     # Given
     string xml_buffer = readfile("./data/auto_arima.gfn")
     bundle B = _(xml_buffer)
 
-
-    # When
-    string funcname_1_expected = "auto_arima"
-    string funcname_2_expected = "print_auto_arima_results"
-    string funcname_1_actual = get_function_name(1, B)
-    string funcname_2_actual = get_function_name(2, B)
-
-    # Then
-    assert(funcname_1_actual == funcname_1_expected)
-    assert(funcname_2_actual == funcname_2_expected)
+    # When + Then
+    loop i=1..nelem(P)
+        scalar actual = get_function_privacy(P[i].id, B)
+        assert(actual == P[i].expected)
+    endloop
 end function
-test_get_function_name()
+test_get_function_privacy(Parameters)
+
 
 function void test_get_code (void)
     print "Start testing get_code()"
