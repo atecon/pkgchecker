@@ -9,14 +9,15 @@
 <help>
 &quot;pkgchecker&quot; supports the retrieval of various information from gfn gretl
 function package files such as:
-- unused (dead) functions
+- unused (dead) private functions
 - number of functions
 - length of functions
 - names of input parameters
 - first-level function dependencies
 - number of calls of a function by other functions
 
-TODOs:
+
+Open TODOs:
 - detect unused variables/ parameters
 - detect when assignments to existing variables are not used
 
@@ -40,6 +41,7 @@ This function consumes a gfn file, compiles various metadata for each function.
 return:     bundle; Each key refers to a function of the package. The
             value is another bundle comprising the following key-value pairs:
             code: string holding the code
+            is_private: bool, zero if public function, otherwise one
             parameter_names: string array holding names of input parameters
 
             The bundle structure is as follows:
@@ -47,16 +49,18 @@ return:     bundle; Each key refers to a function of the package. The
             Codes (bundle)
             |-function_name1
                 |-code (string)
+                |-is_private (bool)
                 |-parameter_names (string array)
                     |- [Name1, Name2,..., NameN]
             |-function_name2
                 |-code (string)
+                |-is_private (bool)
                 |-parameter_names (string array)
                     |- [Name1, Name2,..., NameN]
 
 
 print_pkgsummary(self)
-------------------
+----------------------
 self:       bundle, Bundle returned by get_pkgdata().
 
 This function prints a summary of the 'self' bundle such as the function name,
@@ -66,7 +70,7 @@ return:     nothing
 
 
 function_statistics(self)
----------------------
+-------------------------
 self:       bundle, Bundle returned by get_pkgdata().
 
 This function computes various information, and compiles a bundle including:
@@ -76,9 +80,8 @@ This function computes various information, and compiles a bundle including:
                   column-dimension: functions actually calling the function.
 n_function_calls: Vector holding the number of function calls for each of the
                   'n' total functions
-dead_functions:   string array, Names of functions not called by other
-                  functions; NOTE: such functions might be 'dead' but may
-                  also be public functions instead.
+dead_functions:   string array, Names of private functions not called by other
+                  functions
 
 return:           bundle
 
@@ -116,10 +119,10 @@ return Metadata
  <params count="1">
   <param name="Metadata" type="bundle" const="true"/>
  </params>
-<code>/* Check which function is called by which. Identify unused functions. */
+<code>/* Check which function is called by which. Identify unused private functions. */
 matrix graph = compile_dependency_graph(Metadata)
 matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
-strings dead_functions = get_names_dead_functions(n_function_calls)
+strings dead_functions = get_names_dead_functions(n_function_calls, Metadata)
 return _(graph, n_function_calls, dead_functions)
 </code>
 </gretl-function>
@@ -133,10 +136,10 @@ return _(graph, n_function_calls, dead_functions)
 strings function_names = getkeys(self)
 printf &quot;\n============================================================\n&quot;
 printf &quot;\t\t%s\n\n&quot;, &quot;Summary package function overview&quot;
-printf &quot;%-31s %5s %12s\n&quot;, &quot;Function name&quot;, &quot;# Input params.&quot;, &quot;Lines of Code&quot;
+printf &quot;%-31s %5s %5s %12s\n&quot;, &quot;Function name&quot;, &quot;# Params.&quot;, &quot;Private&quot;, &quot;Lines of Code&quot;
 printf &quot;-------------------------------------------------------------\n&quot;
 loop foreach i function_names
-  print_function_details(self[&quot;$i&quot;], &quot;$i&quot;)
+  print_function_details(self[&quot;$i&quot;], &quot;$i&quot;, self[&quot;$i&quot;].is_private)
 endloop
 printf &quot;============================================================\n&quot;
 </code>
@@ -247,6 +250,17 @@ return sprintf(&quot;%s/gretl-function[%d]/code&quot;, function_path, item)
 return sprintf(&quot;%s/gretl-function[%d]/@name&quot;, function_path, item)
 </code>
 </gretl-function>
+<gretl-function name="get_path_func_private_state" type="string" private="1">
+ <params count="2">
+  <param name="function_path" type="string" const="true"/>
+  <param name="item" type="int" min="1" const="true">
+<description>i-th function code</description>
+  </param>
+ </params>
+<code>/* Compile path for retrieving privacy state for the i-th function definition. */
+return sprintf(&quot;%s/gretl-function[%d]/@private&quot;, function_path, item)
+</code>
+</gretl-function>
 <gretl-function name="get_code" type="string" private="1">
  <params count="2">
   <param name="item" type="scalar" min="1" const="true">
@@ -254,7 +268,7 @@ return sprintf(&quot;%s/gretl-function[%d]/@name&quot;, function_path, item)
   </param>
   <param name="self" type="bundle" const="true"/>
  </params>
-<code>/* Retrieve function name for the i-th function. */
+<code>/* Retrieve name of the i-th function. */
 scalar n_got = 0
 string path = get_path_code(get_function_path(), item)
 return get_path_content(path, self.xml_buffer, &amp;n_got)
@@ -331,6 +345,21 @@ string function_name = get_path_content(path, self.xml_buffer, &amp;n_got)
 return trim_extra_lines(function_name)
 </code>
 </gretl-function>
+<gretl-function name="get_function_privacy" type="scalar" private="1">
+ <params count="2">
+  <param name="item" type="scalar" min="1" const="true">
+<description>i-th function</description>
+  </param>
+  <param name="self" type="bundle" const="true"/>
+ </params>
+<code>/* Retrieve function's privacy status. */
+scalar n_got = 0
+string path = get_path_func_private_state(get_function_path(), item)
+string state = get_path_content(path, self.xml_buffer, &amp;n_got)
+scalar priv = (nelem(state) &gt; 0) ? TRUE : FALSE
+return priv
+</code>
+</gretl-function>
 <gretl-function name="extract_parameters" type="bundle" private="1">
  <params count="2">
   <param name="Metadata" type="bundle"/>
@@ -363,7 +392,7 @@ loop i=1..n_functions
     Warning(&quot;Function not found. Ignore.&quot;)
     flush
   else
-    Codes[&quot;@function_name&quot;] = _(code = get_code($i, self))
+    Codes[&quot;@function_name&quot;] = _(code = get_code($i, self), is_private = get_function_privacy($i, self))
   endif
 endloop
 assert(n_functions == nelem(Codes))
@@ -371,17 +400,18 @@ return Codes
 </code>
 </gretl-function>
 <gretl-function name="get_names_dead_functions" type="strings" private="1">
- <params count="1">
+ <params count="2">
   <param name="n_function_calls" type="matrix" const="true"/>
+  <param name="Metadata" type="bundle" const="true"/>
  </params>
-<code>/* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
+<code>/* Compile array holding names of private functions which are not called in the package. */
 strings function_names = rnameget(n_function_calls)
 strings uncalled = array(0)
-if sumc((n_function_calls .= 0)) == 0
+if sumc(n_function_calls .= 0) == 0
   return uncalled
 endif
 loop i=1..rows(n_function_calls)
-  if n_function_calls[i] == 0
+  if n_function_calls[i] == 0 &amp;&amp; Metadata[function_names[i]].is_private
     uncalled += function_names[i]
   endif
 endloop
@@ -422,14 +452,14 @@ return graph
 </code>
 </gretl-function>
 <gretl-function name="print_function_details" type="void" private="1">
- <params count="2">
+ <params count="3">
   <param name="Function" type="bundle" const="true"/>
   <param name="function_name" type="string" const="true"/>
+  <param name="is_private" type="bool" const="true"/>
  </params>
 <code>scalar n_lines = nelem(strsplit(Function.code, &quot;\n&quot;)) # delimiter in xml
 scalar n_input = nelem(Function.parameter_names)
-n_input = (n_input &gt; 0) ? n_input : 0
-printf &quot;%-31s %5.d %18.d\n&quot;, function_name, n_input, n_lines
+printf &quot;%-31s %5d %8d %8d\n&quot;, function_name, n_input, is_private, n_lines
 </code>
 </gretl-function>
 <gretl-function name="Info" type="void" private="1">
@@ -467,6 +497,7 @@ print_pkgsummary(Meta)
 
 bundle Graph = function_statistics(Meta)
 print Graph
+
 
 eval Graph.n_function_calls
 eval Graph.dead_functions
