@@ -1,13 +1,14 @@
 "pkgchecker" supports the retrieval of various information from gfn gretl
 function package files such as:
-- unused (dead) functions
+- unused (dead) private functions
 - number of functions
 - length of functions
 - names of input parameters
 - first-level function dependencies
 - number of calls of a function by other functions
 
-TODOs:
+
+Open TODOs:
 - detect unused variables/ parameters
 - detect when assignments to existing variables are not used
 
@@ -50,7 +51,7 @@ return:     bundle; Each key refers to a function of the package. The
 
 
 print_pkgsummary(self)
-------------------
+----------------------
 self:       bundle, Bundle returned by get_pkgdata().
 
 This function prints a summary of the 'self' bundle such as the function name,
@@ -60,7 +61,7 @@ return:     nothing
 
 
 function_statistics(self)
----------------------
+-------------------------
 self:       bundle, Bundle returned by get_pkgdata().
 
 This function computes various information, and compiles a bundle including:
@@ -70,9 +71,8 @@ This function computes various information, and compiles a bundle including:
                   column-dimension: functions actually calling the function.
 n_function_calls: Vector holding the number of function calls for each of the
                   'n' total functions
-dead_functions:   string array, Names of functions not called by other
-                  functions; NOTE: such functions might be 'dead' but may
-                  also be public functions instead.
+dead_functions:   string array, Names of private functions not called by other
+                  functions
 
 return:           bundle
 

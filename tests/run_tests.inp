@@ -328,10 +328,15 @@ function void test_get_dead_functions (void)
     # Given
     matrix input = {1, 0, 1, 0}'
     rnameset(input, "A B C D")
+    bundle B = _(\
+                A =_(is_private = FALSE),\
+                B =_(is_private = TRUE),\
+                C =_(is_private = FALSE),\
+                D =_(is_private = TRUE))
 
     # When
     strings expected = defarray("B", "D")
-    strings actual = get_names_dead_functions(input)
+    strings actual = get_names_dead_functions(input, B)
 
     # Then
     assert(nelem(actual) == nelem(expected))

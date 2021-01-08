@@ -12,6 +12,7 @@ print_pkgsummary(Meta)
 bundle Graph = function_statistics(Meta)
 print Graph
 
+
 eval Graph.n_function_calls
 eval Graph.dead_functions
 

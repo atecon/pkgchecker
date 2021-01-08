@@ -252,28 +252,29 @@ end function
 
 
 function bundle function_statistics (const bundle Metadata)
-    /* Check which function is called by which. Identify unused functions. */
+    /* Check which function is called by which. Identify unused private functions. */
 
     matrix graph = compile_dependency_graph(Metadata)
     matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
-    strings dead_functions = get_names_dead_functions(n_function_calls)
+    strings dead_functions = get_names_dead_functions(n_function_calls, Metadata)
 
     return _(graph, n_function_calls, dead_functions)
 end function
 
 
-function strings get_names_dead_functions (const matrix n_function_calls)
-    /* Compile array holding names of functions which are not called in the package. NOTE: Such functions may be public ones. */
+function strings get_names_dead_functions (const matrix n_function_calls,
+                                           const bundle Metadata)
+    /* Compile array holding names of private functions which are not called in the package. */
 
     strings function_names = rnameget(n_function_calls)
     strings uncalled = array(0)
 
-    if sumc((n_function_calls .= 0)) == 0
+    if sumc(n_function_calls .= 0) == 0
         return uncalled
     endif
 
     loop i=1..rows(n_function_calls)
-        if n_function_calls[i] == 0
+        if n_function_calls[i] == 0 && Metadata[function_names[i]].is_private
             uncalled += function_names[i]
         endif
     endloop
@@ -335,12 +336,12 @@ function void print_pkgsummary (const bundle self "Bundle returned by get_pkgdat
     printf "============================================================\n"
 end function
 
+
 function void print_function_details (const bundle Function,
                                       const string function_name,
                                       const bool is_private)
     scalar n_lines = nelem(strsplit(Function.code, "\n")) # delimiter in xml
     scalar n_input = nelem(Function.parameter_names)
-    #n_input = (n_input > 0) ? n_input : 0
 
     printf "%-31s %5d %8d %8d\n", function_name, n_input, is_private, n_lines
 end function
