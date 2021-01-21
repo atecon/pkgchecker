@@ -1,10 +1,16 @@
 set verbose off
 include pkgchecker.gfn
 
-# Install example package file (if not installed, yet)
-# pkg install auto_arima
+# Install auto_arima example package if not present, yet.
+pkg query auto_arima --quiet
+if inbundle($result, "not_found")
+    pkg install auto_arima
+endif
+include auto_arima.gfn
 
+# Pass the gfn file to public function
 string filename = sprintf("%s/functions/auto_arima.gfn", $dotdir)
+print filename        # make sure this is the correct path to the gfn-file
 Meta = get_pkgdata(filename)
 
 print_pkgsummary(Meta)
@@ -12,21 +18,21 @@ print_pkgsummary(Meta)
 bundle Graph = function_statistics(Meta)
 print Graph
 
-
 eval Graph.n_function_calls
 eval Graph.dead_functions
 
 # Access code of a function
+print "Print content of the auto_arima() function."
 eval Meta.auto_arima.code
 
 
-/*
+/* OPTIONAL
 # Plot dependencies -- requires heatmap package
-catch include heatmap.gfn
-if $error
+pkg query include heatmap
+if inbundle($result, "not_found")
     pkg install heatmap # requires internet connection
-    include heatmap.gfn
 endif
+include heatmap.gfn
 heatmap(Graph.graph, _(title="1st level dependency (rows", do_labels=FALSE))
 */
 
