@@ -3,8 +3,8 @@
 <gretl-function-package name="pkgchecker" no-data-ok="true" minver="2020a">
 <author email="atecon@posteo.de">Artur Tarassow</author>
 <version>0.1</version>
-<date>2021-01-02</date>
-<description>Analyze a package and search for 'dead' code</description>
+<date>2021-01-21</date>
+<description>Metrics on gfn package files and search for 'dead' code</description>
 <tags>C81</tags>
 <help>
 &quot;pkgchecker&quot; supports the retrieval of various information from gfn gretl
