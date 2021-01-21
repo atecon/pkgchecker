@@ -492,11 +492,10 @@ pkg query auto_arima --quiet
 if inbundle($result, &quot;not_found&quot;)
     pkg install auto_arima
 endif
-include auto_arima.gfn
+pkg query auto_arima --quiet
+string filename = $result.file      # get the package's path
 
 # Pass the gfn file to public function
-string filename = sprintf(&quot;%s/functions/auto_arima.gfn&quot;, $dotdir)
-print filename        # make sure this is the correct path to the gfn-file
 Meta = get_pkgdata(filename)
 
 print_pkgsummary(Meta)
