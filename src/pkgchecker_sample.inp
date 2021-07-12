@@ -2,11 +2,7 @@ set verbose off
 include pkgchecker.gfn
 
 # Install auto_arima example package if not present, yet.
-pkg query auto_arima --quiet
-if inbundle($result, "not_found")
-    pkg install auto_arima
-endif
-pkg query auto_arima --quiet
+pkg query regls --quiet
 string filename = $result.file      # get the package's path
 
 # Pass the gfn file to public function
@@ -21,14 +17,14 @@ eval Graph.n_function_calls
 eval Graph.dead_functions
 
 # Access code of a function
-print "Print content of the auto_arima() function."
-eval Meta.auto_arima.code
+print "Print content of the regls_fcast() function."
+eval Meta.regls_fcast.code
 
 
 /* OPTIONAL
 # Plot dependencies -- requires heatmap package
-pkg query include heatmap
-if inbundle($result, "not_found")
+pkg query heatmap --quiet
+if !nelem($result)
     pkg install heatmap # requires internet connection
 endif
 include heatmap.gfn

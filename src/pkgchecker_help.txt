@@ -1,3 +1,6 @@
+The "pkgchecker" package is a helper-tool for gretl package
+developers.
+
 "pkgchecker" supports the retrieval of various information from gfn gretl
 function package files such as:
 - unused (dead) private functions
@@ -80,4 +83,10 @@ return:           bundle
 
 Change-log:
 ---------
-v0.1 (01-2021): initial release
+v0.2 (07-2021):
+- Adapt syntax in sample script to new behavior of the "pkg query"
+command in case an empty bundle is returned.
+- Analyse addon "regls" in sample script.
+
+v0.1 (01-2021):
+- initial release

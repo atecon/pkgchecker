@@ -256,7 +256,8 @@ function bundle function_statistics (const bundle Metadata)
 
     matrix graph = compile_dependency_graph(Metadata)
     matrix n_function_calls = summarize_graph(graph, getkeys(Metadata))
-    strings dead_functions = get_names_dead_functions(n_function_calls, Metadata)
+    strings dead_functions = get_names_dead_functions(n_function_calls,\
+                                                      Metadata)
 
     return _(graph, n_function_calls, dead_functions)
 end function

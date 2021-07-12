@@ -2,11 +2,14 @@
 <gretl-functions>
 <gretl-function-package name="pkgchecker" no-data-ok="true" minver="2020a">
 <author email="atecon@posteo.de">Artur Tarassow</author>
-<version>0.1</version>
-<date>2021-01-21</date>
+<version>0.2</version>
+<date>2021-07-12</date>
 <description>Metrics on gfn package files and search for 'dead' code</description>
 <tags>C81</tags>
 <help>
+The &quot;pkgchecker&quot; package is a helper-tool for gretl package
+developers.
+
 &quot;pkgchecker&quot; supports the retrieval of various information from gfn gretl
 function package files such as:
 - unused (dead) private functions
@@ -89,7 +92,13 @@ return:           bundle
 
 Change-log:
 ---------
-v0.1 (01-2021): initial release
+v0.2 (07-2021):
+- Adapt syntax in sample script to new behavior of the &quot;pkg query&quot;
+command in case an empty bundle is returned.
+- Analyse addon &quot;regls&quot; in sample script.
+
+v0.1 (01-2021):
+- initial release
 </help>
 <gretl-function name="get_pkgdata" type="bundle">
  <params count="1">
@@ -488,11 +497,7 @@ set verbose off
 include pkgchecker.gfn
 
 # Install auto_arima example package if not present, yet.
-pkg query auto_arima --quiet
-if inbundle($result, &quot;not_found&quot;)
-    pkg install auto_arima
-endif
-pkg query auto_arima --quiet
+pkg query regls --quiet
 string filename = $result.file      # get the package's path
 
 # Pass the gfn file to public function
@@ -507,14 +512,14 @@ eval Graph.n_function_calls
 eval Graph.dead_functions
 
 # Access code of a function
-print &quot;Print content of the auto_arima() function.&quot;
-eval Meta.auto_arima.code
+print &quot;Print content of the regls_fcast() function.&quot;
+eval Meta.regls_fcast.code
 
 
 /* OPTIONAL
 # Plot dependencies -- requires heatmap package
-pkg query include heatmap
-if inbundle($result, &quot;not_found&quot;)
+pkg query heatmap --quiet
+if !nelem($result)
     pkg install heatmap # requires internet connection
 endif
 include heatmap.gfn
